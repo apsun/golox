@@ -40,3 +40,13 @@ type UnaryExpr struct {
 func (e UnaryExpr) String() string {
 	return fmt.Sprintf("UnaryExpr{operator: %v, right: %v}", e.operator, e.right)
 }
+
+type TernaryExpr struct {
+	cond  Expr
+	left  Expr
+	right Expr
+}
+
+func (e TernaryExpr) String() string {
+	return fmt.Sprintf("TernaryExpr{cond: %v, left: %v, right: %v}", e.cond, e.left, e.right)
+}

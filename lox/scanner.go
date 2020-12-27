@@ -102,6 +102,10 @@ func (s *Scanner) scanToken() {
 		} else {
 			s.addToken(Greater)
 		}
+	case '?':
+		s.addToken(Question)
+	case ':':
+		s.addToken(Colon)
 	case '/':
 		if s.match('/') {
 			s.scanLineComment()

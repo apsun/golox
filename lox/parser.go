@@ -33,11 +33,11 @@ func (p *Parser) expression() Expr {
 }
 
 func (p *Parser) comma() Expr {
-	expr := p.equality()
+	expr := p.ternary()
 
 	for p.match(Comma) {
 		operator := p.previous()
-		right := p.equality()
+		right := p.ternary()
 		expr = BinaryExpr{
 			left:     expr,
 			operator: operator,
@@ -46,7 +46,23 @@ func (p *Parser) comma() Expr {
 	}
 
 	return expr
+}
 
+func (p *Parser) ternary() Expr {
+	expr := p.equality()
+
+	if p.match(Question) {
+		left := p.expression()
+		p.consume(Colon, "expected ':' after expression")
+		right := p.ternary()
+		return TernaryExpr{
+			cond:  expr,
+			left:  left,
+			right: right,
+		}
+	}
+
+	return expr
 }
 
 func (p *Parser) equality() Expr {

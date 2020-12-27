@@ -26,6 +26,8 @@ const (
 	GreaterEqual
 	Less
 	LessEqual
+	Question
+	Colon
 	Identifier
 	String
 	Number
@@ -68,6 +70,8 @@ var tokenTypeStringMap = map[TokenType]string{
 	GreaterEqual: "GreaterEqual",
 	Less:         "Less",
 	LessEqual:    "LessEqual",
+	Question:     "Question",
+	Colon:        "Colon",
 	Identifier:   "Identifier",
 	String:       "String",
 	Number:       "Number",
