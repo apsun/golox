@@ -104,7 +104,7 @@ type Token struct {
 func (t Token) String() string {
 	literalStr := ""
 	if t.literal != nil {
-		literalStr = fmt.Sprintf("literal: %v, ", t.literal)
+		literalStr = fmt.Sprintf("literal: %#v, ", t.literal)
 	}
 	return fmt.Sprintf(
 		"Token{ty: %v, lexeme: %q, %sline: %d}",

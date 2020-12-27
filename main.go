@@ -11,12 +11,16 @@ import (
 func run(source string) bool {
 	scanner := lox.NewScanner(source)
 	tokens := scanner.ScanTokens()
-	for _, token := range tokens {
-		fmt.Printf("%v\n", token)
-	}
+	parser := lox.NewParser(tokens)
+	expr := parser.Parse()
 
 	ok := !lox.HadError()
 	lox.ResetError()
+
+	if ok {
+		fmt.Printf("%v\n", expr)
+	}
+
 	return ok
 }
 
