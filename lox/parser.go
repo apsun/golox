@@ -29,7 +29,24 @@ func (p *Parser) Parse() (ret Expr) {
 }
 
 func (p *Parser) expression() Expr {
-	return p.equality()
+	return p.comma()
+}
+
+func (p *Parser) comma() Expr {
+	expr := p.equality()
+
+	for p.match(Comma) {
+		operator := p.previous()
+		right := p.equality()
+		expr = BinaryExpr{
+			left:     expr,
+			operator: operator,
+			right:    right,
+		}
+	}
+
+	return expr
+
 }
 
 func (p *Parser) equality() Expr {
