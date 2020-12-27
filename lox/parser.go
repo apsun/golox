@@ -1,13 +1,13 @@
 package lox
 
 type Parser struct {
-	tokens []Token
+	tokens  []Token
 	current int
 }
 
 func NewParser(tokens []Token) *Parser {
 	return &Parser{
-		tokens: tokens,
+		tokens:  tokens,
 		current: 0,
 	}
 }
@@ -34,14 +34,14 @@ func (p *Parser) expression() Expr {
 
 func (p *Parser) equality() Expr {
 	expr := p.comparison()
-	
+
 	for p.match(BangEqual, EqualEqual) {
 		operator := p.previous()
 		right := p.comparison()
 		expr = BinaryExpr{
-			left: expr,
+			left:     expr,
 			operator: operator,
-			right: right,
+			right:    right,
 		}
 	}
 
@@ -55,9 +55,9 @@ func (p *Parser) comparison() Expr {
 		operator := p.previous()
 		right := p.term()
 		expr = BinaryExpr{
-			left: expr,
+			left:     expr,
 			operator: operator,
-			right: right,
+			right:    right,
 		}
 	}
 
@@ -71,9 +71,9 @@ func (p *Parser) term() Expr {
 		operator := p.previous()
 		right := p.factor()
 		expr = BinaryExpr{
-			left: expr,
+			left:     expr,
 			operator: operator,
-			right: right,
+			right:    right,
 		}
 	}
 
@@ -87,9 +87,9 @@ func (p *Parser) factor() Expr {
 		operator := p.previous()
 		right := p.unary()
 		expr = BinaryExpr{
-			left: expr,
+			left:     expr,
 			operator: operator,
-			right: right,
+			right:    right,
 		}
 	}
 
@@ -102,7 +102,7 @@ func (p *Parser) unary() Expr {
 		right := p.unary()
 		return UnaryExpr{
 			operator: operator,
-			right: right,
+			right:    right,
 		}
 	}
 
@@ -200,5 +200,5 @@ func (p *Parser) peek() Token {
 }
 
 func (p *Parser) previous() Token {
-	return p.tokens[p.current - 1]
+	return p.tokens[p.current-1]
 }
