@@ -5,7 +5,7 @@ import (
 )
 
 type Expr interface {
-	Evaluate() (Value, *RuntimeError)
+	Evaluate(env *Environment) (Value, *RuntimeError)
 }
 
 // Binary expression
@@ -25,13 +25,13 @@ func (e BinaryExpr) String() string {
 	)
 }
 
-func (e BinaryExpr) Evaluate() (Value, *RuntimeError) {
-	left, err := e.left.Evaluate()
+func (e BinaryExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
+	left, err := e.left.Evaluate(env)
 	if err != nil {
 		return nil, err
 	}
 
-	right, err := e.right.Evaluate()
+	right, err := e.right.Evaluate(env)
 	if err != nil {
 		return nil, err
 	}
@@ -125,8 +125,8 @@ func (e GroupingExpr) String() string {
 	return fmt.Sprintf("GroupingExpr{expression: %v}", e.expression)
 }
 
-func (e GroupingExpr) Evaluate() (Value, *RuntimeError) {
-	return e.expression.Evaluate()
+func (e GroupingExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
+	return e.expression.Evaluate(env)
 }
 
 // Literal expression
@@ -139,7 +139,7 @@ func (e LiteralExpr) String() string {
 	return fmt.Sprintf("LiteralExpr{value: %#v}", e.value)
 }
 
-func (e LiteralExpr) Evaluate() (Value, *RuntimeError) {
+func (e LiteralExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
 	switch v := e.value.(type) {
 	case nil:
 		return NewNil(), nil
@@ -169,8 +169,8 @@ func (e UnaryExpr) String() string {
 	)
 }
 
-func (e UnaryExpr) Evaluate() (Value, *RuntimeError) {
-	r, err := e.right.Evaluate()
+func (e UnaryExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
+	r, err := e.right.Evaluate(env)
 	if err != nil {
 		return nil, err
 	}
@@ -207,15 +207,30 @@ func (e TernaryExpr) String() string {
 	)
 }
 
-func (e TernaryExpr) Evaluate() (Value, *RuntimeError) {
-	cond, err := e.cond.Evaluate()
+func (e TernaryExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
+	cond, err := e.cond.Evaluate(env)
 	if err != nil {
 		return nil, err
 	}
 
 	if cond.Bool() {
-		return e.left.Evaluate()
+		return e.left.Evaluate(env)
 	} else {
-		return e.right.Evaluate()
+		return e.right.Evaluate(env)
 	}
+}
+
+type VariableExpr struct {
+	name Token
+}
+
+func (e VariableExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
+	value := env.Get(e.name.lexeme)
+	if value == nil {
+		return nil, NewRuntimeError(
+			e.name,
+			fmt.Sprintf("undefined variable %s", e.name.lexeme),
+		)
+	}
+	return *value, nil
 }

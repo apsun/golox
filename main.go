@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-func run(source string) bool {
+func run(source string, env *lox.Environment) bool {
 	scanner := lox.NewScanner(source)
 	tokens, errs := scanner.ScanTokens()
 	if len(errs) > 0 {
@@ -28,7 +28,7 @@ func run(source string) bool {
 	}
 
 	for _, expr := range exprs {
-		err := expr.Execute()
+		err := expr.Execute(env)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 		}
@@ -38,19 +38,21 @@ func run(source string) bool {
 }
 
 func runFile(path string) {
+	env := lox.NewEnvironment()
 	content, err := ioutil.ReadFile(path)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "file not found: %s\n", path)
 		os.Exit(1)
 	}
 
-	ok := run(string(content))
+	ok := run(string(content), env)
 	if !ok {
 		os.Exit(65)
 	}
 }
 
 func runPrompt() {
+	env := lox.NewEnvironment()
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		fmt.Fprintf(os.Stderr, "> ")
@@ -58,7 +60,7 @@ func runPrompt() {
 			break
 		}
 		line := scanner.Text()
-		run(line)
+		run(line, env)
 	}
 
 	err := scanner.Err()

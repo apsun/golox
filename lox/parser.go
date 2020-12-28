@@ -17,23 +17,53 @@ func NewParser(tokens []Token) *Parser {
 var unwindToken = struct{}{}
 
 func (p *Parser) Parse() (ret []Stmt, errs []*SyntaxError) {
+	stmts := []Stmt{}
+	for !p.isAtEnd() {
+		decl := p.declaration()
+		if decl != nil {
+			stmts = append(stmts, *decl)
+		}
+	}
+	return stmts, p.errors
+}
+
+func (p *Parser) declaration() (ret *Stmt) {
+	// If we hit an error, skip to the next declaration
 	defer func() {
 		r := recover()
 		if r != nil {
 			if r == unwindToken {
+				p.synchronize()
 				ret = nil
-				errs = p.errors
 			} else {
 				panic(r)
 			}
 		}
 	}()
 
-	stmts := []Stmt{}
-	for !p.isAtEnd() {
-		stmts = append(stmts, p.statement())
+	if p.match(TokenTypeVar) {
+		decl := p.varDeclaration()
+		return &decl
 	}
-	return stmts, nil
+
+	stmt := p.statement()
+	return &stmt
+}
+
+func (p *Parser) varDeclaration() Stmt {
+	name := p.consume(TokenTypeIdentifier, "expected variable name")
+
+	var initializer *Expr = nil
+	if p.match(TokenTypeEqual) {
+		expr := p.expression()
+		initializer = &expr
+	}
+
+	p.consume(TokenTypeSemicolon, "expected ';' after variable declaration")
+	return VarStmt{
+		name:        name,
+		initializer: initializer,
+	}
 }
 
 func (p *Parser) statement() Stmt {
@@ -196,6 +226,10 @@ func (p *Parser) primary() Expr {
 
 	if p.match(TokenTypeNumber, TokenTypeString) {
 		return LiteralExpr{value: p.previous().literal}
+	}
+
+	if p.match(TokenTypeIdentifier) {
+		return VariableExpr{name: p.previous()}
 	}
 
 	if p.match(TokenTypeLeftParen) {
