@@ -53,3 +53,18 @@ func (s VarStmt) Execute(env *Environment) *RuntimeError {
 
 	return nil
 }
+
+type BlockStmt struct {
+	statements []Stmt
+}
+
+func (s BlockStmt) Execute(env *Environment) *RuntimeError {
+	innerEnv := NewEnvironment(env)
+	for _, stmt := range s.statements {
+		err := stmt.Execute(innerEnv)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

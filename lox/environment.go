@@ -5,12 +5,14 @@ import (
 )
 
 type Environment struct {
-	values map[string]Value
+	enclosing *Environment
+	values    map[string]Value
 }
 
-func NewEnvironment() *Environment {
+func NewEnvironment(outer *Environment) *Environment {
 	return &Environment{
-		values: map[string]Value{},
+		enclosing: outer,
+		values:    map[string]Value{},
 	}
 }
 
@@ -22,6 +24,10 @@ func (e *Environment) Define(name Token, value Value) *RuntimeError {
 func (e *Environment) Assign(name Token, value Value) *RuntimeError {
 	_, ok := e.values[name.lexeme]
 	if !ok {
+		if e.enclosing != nil {
+			return e.enclosing.Assign(name, value)
+		}
+
 		return NewRuntimeError(
 			name,
 			fmt.Sprintf("undefined variable %s", name.lexeme),
@@ -34,6 +40,10 @@ func (e *Environment) Assign(name Token, value Value) *RuntimeError {
 func (e *Environment) Get(name Token) (Value, *RuntimeError) {
 	value, ok := e.values[name.lexeme]
 	if !ok {
+		if e.enclosing != nil {
+			return e.enclosing.Get(name)
+		}
+
 		return nil, NewRuntimeError(
 			name,
 			fmt.Sprintf("undefined variable %s", name.lexeme),

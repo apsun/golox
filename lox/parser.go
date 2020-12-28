@@ -70,7 +70,25 @@ func (p *Parser) statement() Stmt {
 	if p.match(TokenTypePrint) {
 		return p.printStatement()
 	}
+	if p.match(TokenTypeLeftBrace) {
+		return p.block()
+	}
 	return p.expressionStatement()
+}
+
+func (p *Parser) block() Stmt {
+	statements := []Stmt{}
+	for !p.isAtEnd() && !p.check(TokenTypeRightBrace) {
+		decl := p.declaration()
+		if decl != nil {
+			statements = append(statements, *decl)
+		}
+	}
+	stmt := BlockStmt{
+		statements: statements,
+	}
+	p.consume(TokenTypeRightBrace, "expected '}' after block")
+	return stmt
 }
 
 func (p *Parser) printStatement() Stmt {

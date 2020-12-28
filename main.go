@@ -38,7 +38,7 @@ func run(source string, env *lox.Environment) bool {
 }
 
 func runFile(path string) {
-	env := lox.NewEnvironment()
+	env := lox.NewEnvironment(nil)
 	content, err := ioutil.ReadFile(path)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "file not found: %s\n", path)
@@ -52,7 +52,7 @@ func runFile(path string) {
 }
 
 func runPrompt() {
-	env := lox.NewEnvironment()
+	env := lox.NewEnvironment(nil)
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		fmt.Fprintf(os.Stderr, "> ")
