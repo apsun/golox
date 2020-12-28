@@ -7,91 +7,91 @@ import (
 type TokenType int
 
 const (
-	LeftParen TokenType = iota
-	RightParen
-	LeftBrace
-	RightBrace
-	Comma
-	Dot
-	Minus
-	Plus
-	Semicolon
-	Slash
-	Star
-	Bang
-	BangEqual
-	Equal
-	EqualEqual
-	Greater
-	GreaterEqual
-	Less
-	LessEqual
-	Question
-	Colon
-	Identifier
-	String
-	Number
-	And
-	Class
-	Else
-	False
-	Fun
-	For
-	If
-	Nil
-	Or
-	Print
-	Return
-	Super
-	This
-	True
-	Var
-	While
-	EOF
+	TokenTypeLeftParen TokenType = iota
+	TokenTypeRightParen
+	TokenTypeLeftBrace
+	TokenTypeRightBrace
+	TokenTypeComma
+	TokenTypeDot
+	TokenTypeMinus
+	TokenTypePlus
+	TokenTypeSemicolon
+	TokenTypeSlash
+	TokenTypeStar
+	TokenTypeBang
+	TokenTypeBangEqual
+	TokenTypeEqual
+	TokenTypeEqualEqual
+	TokenTypeGreater
+	TokenTypeGreaterEqual
+	TokenTypeLess
+	TokenTypeLessEqual
+	TokenTypeQuestion
+	TokenTypeColon
+	TokenTypeIdentifier
+	TokenTypeString
+	TokenTypeNumber
+	TokenTypeAnd
+	TokenTypeClass
+	TokenTypeElse
+	TokenTypeFalse
+	TokenTypeFun
+	TokenTypeFor
+	TokenTypeIf
+	TokenTypeNil
+	TokenTypeOr
+	TokenTypePrint
+	TokenTypeReturn
+	TokenTypeSuper
+	TokenTypeThis
+	TokenTypeTrue
+	TokenTypeVar
+	TokenTypeWhile
+	TokenTypeEOF
 )
 
 var tokenTypeStringMap = map[TokenType]string{
-	LeftParen:    "LeftParen",
-	RightParen:   "RightParen",
-	LeftBrace:    "LeftBrace",
-	RightBrace:   "RightBrace",
-	Comma:        "Comma",
-	Dot:          "Dot",
-	Minus:        "Minus",
-	Plus:         "Plus",
-	Semicolon:    "Semicolon",
-	Slash:        "Slash",
-	Star:         "Star",
-	Bang:         "Bang",
-	BangEqual:    "BangEqual",
-	Equal:        "Equal",
-	EqualEqual:   "EqualEqual",
-	Greater:      "Greater",
-	GreaterEqual: "GreaterEqual",
-	Less:         "Less",
-	LessEqual:    "LessEqual",
-	Question:     "Question",
-	Colon:        "Colon",
-	Identifier:   "Identifier",
-	String:       "String",
-	Number:       "Number",
-	And:          "And",
-	Class:        "Class",
-	Else:         "Else",
-	False:        "False",
-	Fun:          "Fun",
-	For:          "For",
-	If:           "If",
-	Nil:          "Nil",
-	Or:           "Or",
-	Print:        "Print",
-	Return:       "Return",
-	Super:        "Super",
-	This:         "This",
-	True:         "True",
-	Var:          "Var",
-	While:        "While",
-	EOF:          "EOF",
+	TokenTypeLeftParen:    "LeftParen",
+	TokenTypeRightParen:   "RightParen",
+	TokenTypeLeftBrace:    "LeftBrace",
+	TokenTypeRightBrace:   "RightBrace",
+	TokenTypeComma:        "Comma",
+	TokenTypeDot:          "Dot",
+	TokenTypeMinus:        "Minus",
+	TokenTypePlus:         "Plus",
+	TokenTypeSemicolon:    "Semicolon",
+	TokenTypeSlash:        "Slash",
+	TokenTypeStar:         "Star",
+	TokenTypeBang:         "Bang",
+	TokenTypeBangEqual:    "BangEqual",
+	TokenTypeEqual:        "Equal",
+	TokenTypeEqualEqual:   "EqualEqual",
+	TokenTypeGreater:      "Greater",
+	TokenTypeGreaterEqual: "GreaterEqual",
+	TokenTypeLess:         "Less",
+	TokenTypeLessEqual:    "LessEqual",
+	TokenTypeQuestion:     "Question",
+	TokenTypeColon:        "Colon",
+	TokenTypeIdentifier:   "Identifier",
+	TokenTypeString:       "String",
+	TokenTypeNumber:       "Number",
+	TokenTypeAnd:          "And",
+	TokenTypeClass:        "Class",
+	TokenTypeElse:         "Else",
+	TokenTypeFalse:        "False",
+	TokenTypeFun:          "Fun",
+	TokenTypeFor:          "For",
+	TokenTypeIf:           "If",
+	TokenTypeNil:          "Nil",
+	TokenTypeOr:           "Or",
+	TokenTypePrint:        "Print",
+	TokenTypeReturn:       "Return",
+	TokenTypeSuper:        "Super",
+	TokenTypeThis:         "This",
+	TokenTypeTrue:         "True",
+	TokenTypeVar:          "Var",
+	TokenTypeWhile:        "While",
+	TokenTypeEOF:          "EOF",
 }
 
 func (ty TokenType) String() string {

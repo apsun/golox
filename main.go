@@ -18,7 +18,12 @@ func run(source string) bool {
 	lox.ResetError()
 
 	if ok {
-		fmt.Printf("%v\n", expr)
+		value, err := expr.Evaluate()
+		if err != nil {
+			fmt.Printf("error: %v\n", err.Error())
+		} else {
+			fmt.Printf("%#v\n", value)
+		}
 	}
 
 	return ok

@@ -35,7 +35,7 @@ func (p *Parser) expression() Expr {
 func (p *Parser) comma() Expr {
 	expr := p.ternary()
 
-	for p.match(Comma) {
+	for p.match(TokenTypeComma) {
 		operator := p.previous()
 		right := p.ternary()
 		expr = BinaryExpr{
@@ -51,9 +51,9 @@ func (p *Parser) comma() Expr {
 func (p *Parser) ternary() Expr {
 	expr := p.equality()
 
-	if p.match(Question) {
+	if p.match(TokenTypeQuestion) {
 		left := p.expression()
-		p.consume(Colon, "expected ':' after expression")
+		p.consume(TokenTypeColon, "expected ':' after expression")
 		right := p.ternary()
 		return TernaryExpr{
 			cond:  expr,
@@ -68,7 +68,10 @@ func (p *Parser) ternary() Expr {
 func (p *Parser) equality() Expr {
 	expr := p.comparison()
 
-	for p.match(BangEqual, EqualEqual) {
+	for p.match(
+		TokenTypeBangEqual,
+		TokenTypeEqualEqual,
+	) {
 		operator := p.previous()
 		right := p.comparison()
 		expr = BinaryExpr{
@@ -84,7 +87,12 @@ func (p *Parser) equality() Expr {
 func (p *Parser) comparison() Expr {
 	expr := p.term()
 
-	for p.match(Greater, GreaterEqual, Less, LessEqual) {
+	for p.match(
+		TokenTypeGreater,
+		TokenTypeGreaterEqual,
+		TokenTypeLess,
+		TokenTypeLessEqual,
+	) {
 		operator := p.previous()
 		right := p.term()
 		expr = BinaryExpr{
@@ -100,7 +108,7 @@ func (p *Parser) comparison() Expr {
 func (p *Parser) term() Expr {
 	expr := p.factor()
 
-	for p.match(Minus, Plus) {
+	for p.match(TokenTypeMinus, TokenTypePlus) {
 		operator := p.previous()
 		right := p.factor()
 		expr = BinaryExpr{
@@ -116,7 +124,7 @@ func (p *Parser) term() Expr {
 func (p *Parser) factor() Expr {
 	expr := p.unary()
 
-	for p.match(Slash, Star) {
+	for p.match(TokenTypeSlash, TokenTypeStar) {
 		operator := p.previous()
 		right := p.unary()
 		expr = BinaryExpr{
@@ -130,7 +138,7 @@ func (p *Parser) factor() Expr {
 }
 
 func (p *Parser) unary() Expr {
-	if p.match(Bang, Minus) {
+	if p.match(TokenTypeBang, TokenTypeMinus) {
 		operator := p.previous()
 		right := p.unary()
 		return UnaryExpr{
@@ -143,25 +151,25 @@ func (p *Parser) unary() Expr {
 }
 
 func (p *Parser) primary() Expr {
-	if p.match(False) {
+	if p.match(TokenTypeFalse) {
 		return LiteralExpr{value: false}
 	}
 
-	if p.match(True) {
+	if p.match(TokenTypeTrue) {
 		return LiteralExpr{value: true}
 	}
 
-	if p.match(Nil) {
+	if p.match(TokenTypeNil) {
 		return LiteralExpr{value: nil}
 	}
 
-	if p.match(Number, String) {
+	if p.match(TokenTypeNumber, TokenTypeString) {
 		return LiteralExpr{value: p.previous().literal}
 	}
 
-	if p.match(LeftParen) {
+	if p.match(TokenTypeLeftParen) {
 		expr := p.expression()
-		p.consume(RightParen, "expected ')' after expression")
+		p.consume(TokenTypeRightParen, "expected ')' after expression")
 		return GroupingExpr{expression: expr}
 	}
 
@@ -187,12 +195,19 @@ func (p *Parser) synchronize() {
 	p.advance()
 
 	for !p.isAtEnd() {
-		if p.previous().ty == Semicolon {
+		if p.previous().ty == TokenTypeSemicolon {
 			return
 		}
 
 		switch p.peek().ty {
-		case Class, Fun, Var, For, If, While, Print, Return:
+		case TokenTypeClass,
+			TokenTypeFun,
+			TokenTypeVar,
+			TokenTypeFor,
+			TokenTypeIf,
+			TokenTypeWhile,
+			TokenTypePrint,
+			TokenTypeReturn:
 			return
 		}
 
@@ -225,7 +240,7 @@ func (p *Parser) advance() Token {
 }
 
 func (p *Parser) isAtEnd() bool {
-	return p.peek().ty == EOF
+	return p.peek().ty == TokenTypeEOF
 }
 
 func (p *Parser) peek() Token {

@@ -5,22 +5,22 @@ import (
 )
 
 var keywords = map[string]TokenType{
-	"and":    And,
-	"class":  Class,
-	"else":   Else,
-	"false":  False,
-	"for":    For,
-	"fun":    Fun,
-	"if":     If,
-	"nil":    Nil,
-	"or":     Or,
-	"print":  Print,
-	"return": Return,
-	"super":  Super,
-	"this":   This,
-	"true":   True,
-	"var":    Var,
-	"while":  While,
+	"and":    TokenTypeAnd,
+	"class":  TokenTypeClass,
+	"else":   TokenTypeElse,
+	"false":  TokenTypeFalse,
+	"for":    TokenTypeFor,
+	"fun":    TokenTypeFun,
+	"if":     TokenTypeIf,
+	"nil":    TokenTypeNil,
+	"or":     TokenTypeOr,
+	"print":  TokenTypePrint,
+	"return": TokenTypeReturn,
+	"super":  TokenTypeSuper,
+	"this":   TokenTypeThis,
+	"true":   TokenTypeTrue,
+	"var":    TokenTypeVar,
+	"while":  TokenTypeWhile,
 }
 
 type Scanner struct {
@@ -47,7 +47,7 @@ func (s *Scanner) ScanTokens() []Token {
 		s.scanToken()
 	}
 	s.tokens = append(s.tokens, Token{
-		ty:      EOF,
+		ty:      TokenTypeEOF,
 		lexeme:  "",
 		literal: nil,
 		line:    s.line,
@@ -59,60 +59,60 @@ func (s *Scanner) scanToken() {
 	c := s.advance()
 	switch c {
 	case '(':
-		s.addToken(LeftParen)
+		s.addToken(TokenTypeLeftParen)
 	case ')':
-		s.addToken(RightParen)
+		s.addToken(TokenTypeRightParen)
 	case '{':
-		s.addToken(LeftBrace)
+		s.addToken(TokenTypeLeftBrace)
 	case '}':
-		s.addToken(RightBrace)
+		s.addToken(TokenTypeRightBrace)
 	case ',':
-		s.addToken(Comma)
+		s.addToken(TokenTypeComma)
 	case '.':
-		s.addToken(Dot)
+		s.addToken(TokenTypeDot)
 	case '-':
-		s.addToken(Minus)
+		s.addToken(TokenTypeMinus)
 	case '+':
-		s.addToken(Plus)
+		s.addToken(TokenTypePlus)
 	case ';':
-		s.addToken(Semicolon)
+		s.addToken(TokenTypeSemicolon)
 	case '*':
-		s.addToken(Star)
+		s.addToken(TokenTypeStar)
 	case '!':
 		if s.match('=') {
-			s.addToken(BangEqual)
+			s.addToken(TokenTypeBangEqual)
 		} else {
-			s.addToken(Bang)
+			s.addToken(TokenTypeBang)
 		}
 	case '=':
 		if s.match('=') {
-			s.addToken(EqualEqual)
+			s.addToken(TokenTypeEqualEqual)
 		} else {
-			s.addToken(Equal)
+			s.addToken(TokenTypeEqual)
 		}
 	case '<':
 		if s.match('=') {
-			s.addToken(LessEqual)
+			s.addToken(TokenTypeLessEqual)
 		} else {
-			s.addToken(Less)
+			s.addToken(TokenTypeLess)
 		}
 	case '>':
 		if s.match('=') {
-			s.addToken(GreaterEqual)
+			s.addToken(TokenTypeGreaterEqual)
 		} else {
-			s.addToken(Greater)
+			s.addToken(TokenTypeGreater)
 		}
 	case '?':
-		s.addToken(Question)
+		s.addToken(TokenTypeQuestion)
 	case ':':
-		s.addToken(Colon)
+		s.addToken(TokenTypeColon)
 	case '/':
 		if s.match('/') {
 			s.scanLineComment()
 		} else if s.match('*') {
 			s.scanBlockComment()
 		} else {
-			s.addToken(Slash)
+			s.addToken(TokenTypeSlash)
 		}
 	case ' ', '\r', '\t':
 		// Ignore whitespace
@@ -174,7 +174,7 @@ func (s *Scanner) scanNumber() {
 		panic(err)
 	}
 
-	s.addTokenWithLiteral(Number, num)
+	s.addTokenWithLiteral(TokenTypeNumber, num)
 }
 
 func (s *Scanner) scanIdentifier() {
@@ -186,7 +186,7 @@ func (s *Scanner) scanIdentifier() {
 	text := s.source[s.start:s.current]
 	ty, ok := keywords[text]
 	if !ok {
-		ty = Identifier
+		ty = TokenTypeIdentifier
 	}
 
 	s.addToken(ty)
@@ -209,7 +209,7 @@ func (s *Scanner) scanString() {
 	s.advance()
 
 	value := s.source[s.start+1 : s.current-1]
-	s.addTokenWithLiteral(String, value)
+	s.addTokenWithLiteral(TokenTypeString, value)
 }
 
 func isDigit(c rune) bool {

@@ -7,8 +7,24 @@ import (
 
 var hadError = false
 
+type RuntimeError struct {
+	token   Token
+	message string
+}
+
+func NewRuntimeError(token Token, message string) *RuntimeError {
+	return &RuntimeError{
+		token:   token,
+		message: message,
+	}
+}
+
+func (e *RuntimeError) Error() string {
+	return e.message
+}
+
 func reportErrorAtToken(token Token, message string) {
-	if token.ty == EOF {
+	if token.ty == TokenTypeEOF {
 		reportErrorAt(token.line, "end", message)
 	} else {
 		reportErrorAt(token.line, token.lexeme, message)
