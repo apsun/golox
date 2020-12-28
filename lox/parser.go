@@ -3,29 +3,32 @@ package lox
 type Parser struct {
 	tokens  []Token
 	current int
+	errors  []*SyntaxError
 }
 
 func NewParser(tokens []Token) *Parser {
 	return &Parser{
 		tokens:  tokens,
 		current: 0,
+		errors:  []*SyntaxError{},
 	}
 }
 
 var unwindToken = struct{}{}
 
-func (p *Parser) Parse() (ret Expr) {
+func (p *Parser) Parse() (ret Expr, errs []*SyntaxError) {
 	defer func() {
 		r := recover()
 		if r != nil {
 			if r == unwindToken {
 				ret = nil
+				errs = p.errors
 			} else {
 				panic(r)
 			}
 		}
 	}()
-	return p.expression()
+	return p.expression(), nil
 }
 
 func (p *Parser) expression() Expr {
@@ -187,7 +190,7 @@ func (p *Parser) consume(ty TokenType, message string) Token {
 }
 
 func (p *Parser) unwindWithError(t Token, message string) {
-	reportErrorAtToken(t, message)
+	p.errors = append(p.errors, NewSyntaxError(t.line, &t, message))
 	panic(unwindToken)
 }
 

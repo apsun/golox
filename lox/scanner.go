@@ -29,6 +29,7 @@ type Scanner struct {
 	start   int
 	current int
 	line    int
+	errors  []*SyntaxError
 }
 
 func NewScanner(source string) *Scanner {
@@ -41,18 +42,18 @@ func NewScanner(source string) *Scanner {
 	}
 }
 
-func (s *Scanner) ScanTokens() []Token {
+func (s *Scanner) ScanTokens() ([]Token, []*SyntaxError) {
 	for !s.isAtEnd() {
 		s.start = s.current
 		s.scanToken()
 	}
 	s.tokens = append(s.tokens, Token{
 		ty:      TokenTypeEOF,
-		lexeme:  "",
+		lexeme:  "(EOF)",
 		literal: nil,
 		line:    s.line,
 	})
-	return s.tokens
+	return s.tokens, s.errors
 }
 
 func (s *Scanner) scanToken() {
@@ -126,7 +127,9 @@ func (s *Scanner) scanToken() {
 		} else if isAlpha(c) {
 			s.scanIdentifier()
 		} else {
-			reportError(s.line, "unexpected character")
+			s.errors = append(s.errors, NewSyntaxError(
+				s.line, nil, "unexpected character",
+			))
 		}
 	}
 }
@@ -201,7 +204,9 @@ func (s *Scanner) scanString() {
 	}
 
 	if s.isAtEnd() {
-		reportError(s.line, "unterminated string")
+		s.errors = append(s.errors, NewSyntaxError(
+			s.line, nil, "unterminated string",
+		))
 		return
 	}
 

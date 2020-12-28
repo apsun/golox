@@ -10,23 +10,31 @@ import (
 
 func run(source string) bool {
 	scanner := lox.NewScanner(source)
-	tokens := scanner.ScanTokens()
-	parser := lox.NewParser(tokens)
-	expr := parser.Parse()
-
-	ok := !lox.HadError()
-	lox.ResetError()
-
-	if ok {
-		value, err := expr.Evaluate()
-		if err != nil {
-			fmt.Printf("error: %v\n", err.Error())
-		} else {
-			fmt.Printf("%#v\n", value)
+	tokens, errs := scanner.ScanTokens()
+	if len(errs) > 0 {
+		for _, err := range errs {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
 		}
+		return false
 	}
 
-	return ok
+	parser := lox.NewParser(tokens)
+	expr, errs := parser.Parse()
+	if len(errs) > 0 {
+		for _, err := range errs {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+		}
+		return false
+	}
+
+	value, err := expr.Evaluate()
+	if err != nil {
+		fmt.Printf("error: %v\n", err.Error())
+	} else {
+		fmt.Printf("%#v\n", value)
+	}
+
+	return true
 }
 
 func runFile(path string) {

@@ -2,10 +2,34 @@ package lox
 
 import (
 	"fmt"
-	"os"
 )
 
-var hadError = false
+type SyntaxError struct {
+	line    int
+	token   *Token
+	message string
+}
+
+func NewSyntaxError(line int, token *Token, message string) *SyntaxError {
+	return &SyntaxError{
+		line:    line,
+		token:   token,
+		message: message,
+	}
+}
+
+func (e *SyntaxError) Error() string {
+	if e.token != nil {
+		return fmt.Sprintf(
+			"error on line %d at %s: %s",
+			e.line,
+			e.token.lexeme,
+			e.message,
+		)
+	} else {
+		return fmt.Sprintf("error on line %d: %s", e.line, e.message)
+	}
+}
 
 type RuntimeError struct {
 	token   Token
@@ -20,35 +44,5 @@ func NewRuntimeError(token Token, message string) *RuntimeError {
 }
 
 func (e *RuntimeError) Error() string {
-	return e.message
-}
-
-func reportErrorAtToken(token Token, message string) {
-	if token.ty == TokenTypeEOF {
-		reportErrorAt(token.line, "end", message)
-	} else {
-		reportErrorAt(token.line, token.lexeme, message)
-	}
-}
-
-func reportErrorAt(line int, where string, message string) {
-	fmt.Fprintf(
-		os.Stderr,
-		"error on line %d at %s: %s\n",
-		line, where, message,
-	)
-	hadError = true
-}
-
-func reportError(line int, message string) {
-	fmt.Fprintf(os.Stderr, "error on line %d: %s\n", line, message)
-	hadError = true
-}
-
-func HadError() bool {
-	return hadError
-}
-
-func ResetError() {
-	hadError = false
+	return fmt.Sprintf("error on line %d: %s", e.token.line, e.message)
 }
