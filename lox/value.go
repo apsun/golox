@@ -1,5 +1,10 @@
 package lox
 
+import (
+	"strconv"
+	"fmt"
+)
+
 type Type int
 
 const (
@@ -23,6 +28,8 @@ type Value interface {
 	AsNumber() *float64
 	AsString() *string
 	Equal(other Value) bool
+	String() string
+	Repr() string
 }
 
 // nil
@@ -55,6 +62,14 @@ func (x Nil) Equal(other Value) bool {
 	return x == other
 }
 
+func (x Nil) String() string {
+	return "nil"
+}
+
+func (x Nil) Repr() string {
+	return x.String()
+}
+
 // bool
 
 func NewBool(value bool) Bool {
@@ -83,6 +98,14 @@ func (x Bool) AsString() *string {
 
 func (x Bool) Equal(other Value) bool {
 	return other.Type() == TypeBool && x.value == other.(Bool).value
+}
+
+func (x Bool) String() string {
+	return strconv.FormatBool(x.value)
+}
+
+func (x Bool) Repr() string {
+	return x.String()
 }
 
 // number
@@ -115,6 +138,14 @@ func (x Number) Equal(other Value) bool {
 	return other.Type() == TypeNumber && x.value == other.(Number).value
 }
 
+func (x Number) String() string {
+	return strconv.FormatFloat(x.value, 'f', -1, 64)
+}
+
+func (x Number) Repr() string {
+	return x.String()
+}
+
 // string
 
 func NewString(value string) String {
@@ -143,4 +174,12 @@ func (x String) AsString() *string {
 
 func (x String) Equal(other Value) bool {
 	return other.Type() == TypeString && x.value == other.(String).value
+}
+
+func (x String) String() string {
+	return x.value
+}
+
+func (x String) Repr() string {
+	return fmt.Sprintf("%q", x.value)
 }

@@ -31,7 +31,7 @@ func run(source string) bool {
 	if err != nil {
 		fmt.Printf("error: %v\n", err.Error())
 	} else {
-		fmt.Printf("%#v\n", value)
+		fmt.Printf("%s\n", value.Repr())
 	}
 
 	return true

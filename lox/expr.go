@@ -88,6 +88,14 @@ func (e BinaryExpr) Evaluate() (Value, *RuntimeError) {
 			return NewString(*ls + *rs), nil
 		}
 
+		if ls != nil {
+			return NewString(*ls + right.String()), nil
+		}
+
+		if rs != nil {
+			return NewString(left.String() + *rs), nil
+		}
+
 		return nil, NewRuntimeError(
 			e.operator,
 			"+ operands must be numbers or strings",
