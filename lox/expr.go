@@ -45,8 +45,8 @@ func (e BinaryExpr) Evaluate() (Value, *RuntimeError) {
 		TokenTypeLess,
 		TokenTypeLessEqual:
 
-		l := left.AsNumber()
-		r := right.AsNumber()
+		l := left.CastNumber()
+		r := right.CastNumber()
 		if l == nil || r == nil {
 			return nil, NewRuntimeError(
 				e.operator,
@@ -82,14 +82,14 @@ func (e BinaryExpr) Evaluate() (Value, *RuntimeError) {
 			panic("unreachable")
 		}
 	case TokenTypePlus:
-		ln := left.AsNumber()
-		rn := right.AsNumber()
+		ln := left.CastNumber()
+		rn := right.CastNumber()
 		if ln != nil && rn != nil {
 			return NewNumber(*ln + *rn), nil
 		}
 
-		ls := left.AsString()
-		rs := right.AsString()
+		ls := left.CastString()
+		rs := right.CastString()
 		if ls != nil && rs != nil {
 			return NewString(*ls + *rs), nil
 		}
@@ -177,9 +177,9 @@ func (e UnaryExpr) Evaluate() (Value, *RuntimeError) {
 
 	switch e.operator.ty {
 	case TokenTypeBang:
-		return NewBool(!r.AsBool()), nil
+		return NewBool(!r.Bool()), nil
 	case TokenTypeMinus:
-		rn := r.AsNumber()
+		rn := r.CastNumber()
 		if rn == nil {
 			return nil, NewRuntimeError(
 				e.operator,
@@ -213,7 +213,7 @@ func (e TernaryExpr) Evaluate() (Value, *RuntimeError) {
 		return nil, err
 	}
 
-	if cond.AsBool() {
+	if cond.Bool() {
 		return e.left.Evaluate()
 	} else {
 		return e.right.Evaluate()

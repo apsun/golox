@@ -24,9 +24,9 @@ var nilInstance = Nil{}
 type Value interface {
 	Type() Type
 	IsNil() bool
-	AsBool() bool
-	AsNumber() *float64
-	AsString() *string
+	Bool() bool
+	CastNumber() *float64
+	CastString() *string
 	Equal(other Value) bool
 	String() string
 	Repr() string
@@ -46,15 +46,15 @@ func (x Nil) IsNil() bool {
 	return true
 }
 
-func (x Nil) AsBool() bool {
+func (x Nil) Bool() bool {
 	return false
 }
 
-func (x Nil) AsNumber() *float64 {
+func (x Nil) CastNumber() *float64 {
 	return nil
 }
 
-func (x Nil) AsString() *string {
+func (x Nil) CastString() *string {
 	return nil
 }
 
@@ -84,15 +84,15 @@ func (x Bool) IsNil() bool {
 	return false
 }
 
-func (x Bool) AsBool() bool {
+func (x Bool) Bool() bool {
 	return x.value
 }
 
-func (x Bool) AsNumber() *float64 {
+func (x Bool) CastNumber() *float64 {
 	return nil
 }
 
-func (x Bool) AsString() *string {
+func (x Bool) CastString() *string {
 	return nil
 }
 
@@ -122,15 +122,15 @@ func (x Number) IsNil() bool {
 	return false
 }
 
-func (x Number) AsBool() bool {
+func (x Number) Bool() bool {
 	return true
 }
 
-func (x Number) AsNumber() *float64 {
+func (x Number) CastNumber() *float64 {
 	return &x.value
 }
 
-func (x Number) AsString() *string {
+func (x Number) CastString() *string {
 	return nil
 }
 
@@ -160,15 +160,15 @@ func (x String) IsNil() bool {
 	return false
 }
 
-func (x String) AsBool() bool {
+func (x String) Bool() bool {
 	return true
 }
 
-func (x String) AsNumber() *float64 {
+func (x String) CastNumber() *float64 {
 	return nil
 }
 
-func (x String) AsString() *string {
+func (x String) CastString() *string {
 	return &x.value
 }
 
