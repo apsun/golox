@@ -29,7 +29,7 @@ func run(source string) bool {
 
 	value, err := expr.Evaluate()
 	if err != nil {
-		fmt.Printf("error: %v\n", err.Error())
+		fmt.Printf("%v\n", err)
 	} else {
 		fmt.Printf("%s\n", value.Repr())
 	}

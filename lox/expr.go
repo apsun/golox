@@ -61,6 +61,12 @@ func (e BinaryExpr) Evaluate() (Value, *RuntimeError) {
 		case TokenTypeMinus:
 			return NewNumber(*l - *r), nil
 		case TokenTypeSlash:
+			if *r == 0 {
+				return nil, NewRuntimeError(
+					e.operator,
+					fmt.Sprintf("division by zero"),
+				)
+			}
 			return NewNumber(*l / *r), nil
 		case TokenTypeStar:
 			return NewNumber(*l * *r), nil
