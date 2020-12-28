@@ -94,16 +94,41 @@ func (p *Parser) expression() Expr {
 }
 
 func (p *Parser) comma() Expr {
-	expr := p.ternary()
+	expr := p.assignment()
 
 	for p.match(TokenTypeComma) {
 		operator := p.previous()
-		right := p.ternary()
+		right := p.assignment()
 		expr = BinaryExpr{
 			left:     expr,
 			operator: operator,
 			right:    right,
 		}
+	}
+
+	return expr
+}
+
+func (p *Parser) assignment() Expr {
+	expr := p.ternary()
+
+	if p.match(TokenTypeEqual) {
+		equals := p.previous()
+		value := p.assignment()
+
+		// Left hand side needs to be a variable expression
+		// for now. We reach into it and grab the name of the
+		// variable.
+		varExpr, ok := expr.(VariableExpr)
+		if ok {
+			name := varExpr.name
+			return AssignExpr{
+				name:  name,
+				value: value,
+			}
+		}
+
+		p.addError(equals, "invalid assignment target")
 	}
 
 	return expr
@@ -238,8 +263,8 @@ func (p *Parser) primary() Expr {
 		return GroupingExpr{expression: expr}
 	}
 
-	p.unwindWithError(p.peek(), "expected expression")
-	panic("unreachable")
+	p.addError(p.peek(), "expected expression")
+	panic(unwindToken)
 }
 
 func (p *Parser) consume(ty TokenType, message string) Token {
@@ -247,13 +272,12 @@ func (p *Parser) consume(ty TokenType, message string) Token {
 		return p.advance()
 	}
 
-	p.unwindWithError(p.peek(), message)
-	panic("unreachable")
+	p.addError(p.peek(), message)
+	panic(unwindToken)
 }
 
-func (p *Parser) unwindWithError(t Token, message string) {
+func (p *Parser) addError(t Token, message string) {
 	p.errors = append(p.errors, NewSyntaxError(t.line, &t, message))
-	panic(unwindToken)
 }
 
 func (p *Parser) synchronize() {

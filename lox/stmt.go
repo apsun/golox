@@ -46,6 +46,10 @@ func (s VarStmt) Execute(env *Environment) *RuntimeError {
 		}
 	}
 
-	env.Define(s.name.lexeme, value)
+	err := env.Define(s.name, value)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

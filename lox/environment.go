@@ -1,5 +1,9 @@
 package lox
 
+import (
+	"fmt"
+)
+
 type Environment struct {
 	values map[string]Value
 }
@@ -10,14 +14,30 @@ func NewEnvironment() *Environment {
 	}
 }
 
-func (e *Environment) Define(key string, value Value) {
-	e.values[key] = value
+func (e *Environment) Define(name Token, value Value) *RuntimeError {
+	e.values[name.lexeme] = value
+	return nil
 }
 
-func (e *Environment) Get(key string) *Value {
-	value, ok := e.values[key]
+func (e *Environment) Assign(name Token, value Value) *RuntimeError {
+	_, ok := e.values[name.lexeme]
 	if !ok {
-		return nil
+		return NewRuntimeError(
+			name,
+			fmt.Sprintf("undefined variable %s", name.lexeme),
+		)
 	}
-	return &value
+	e.values[name.lexeme] = value
+	return nil
+}
+
+func (e *Environment) Get(name Token) (Value, *RuntimeError) {
+	value, ok := e.values[name.lexeme]
+	if !ok {
+		return nil, NewRuntimeError(
+			name,
+			fmt.Sprintf("undefined variable %s", name.lexeme),
+		)
+	}
+	return value, nil
 }

@@ -225,12 +225,24 @@ type VariableExpr struct {
 }
 
 func (e VariableExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
-	value := env.Get(e.name.lexeme)
-	if value == nil {
-		return nil, NewRuntimeError(
-			e.name,
-			fmt.Sprintf("undefined variable %s", e.name.lexeme),
-		)
+	return env.Get(e.name)
+}
+
+type AssignExpr struct {
+	name  Token
+	value Expr
+}
+
+func (e AssignExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
+	value, err := e.value.Evaluate(env)
+	if err != nil {
+		return nil, err
 	}
-	return *value, nil
+
+	err = env.Assign(e.name, value)
+	if err != nil {
+		return nil, err
+	}
+
+	return value, nil
 }
