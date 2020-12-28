@@ -1,8 +1,8 @@
 package lox
 
 import (
-	"strconv"
 	"fmt"
+	"strconv"
 )
 
 type Type int

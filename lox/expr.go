@@ -209,7 +209,7 @@ func (e TernaryExpr) String() string {
 
 func (e TernaryExpr) Evaluate() (Value, *RuntimeError) {
 	cond, err := e.cond.Evaluate()
-	if cond != nil {
+	if err != nil {
 		return nil, err
 	}
 

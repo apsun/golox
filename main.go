@@ -29,7 +29,7 @@ func run(source string) bool {
 
 	value, err := expr.Evaluate()
 	if err != nil {
-		fmt.Printf("%v\n", err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 	} else {
 		fmt.Printf("%s\n", value.Repr())
 	}
@@ -53,7 +53,7 @@ func runFile(path string) {
 func runPrompt() {
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
-		fmt.Printf("> ")
+		fmt.Fprintf(os.Stderr, "> ")
 		if !scanner.Scan() {
 			break
 		}
