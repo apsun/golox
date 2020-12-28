@@ -16,10 +16,10 @@ func NewParser(tokens []Token) *Parser {
 
 var unwindToken = struct{}{}
 
-func (p *Parser) Parse() (ret []Stmt, errs []*SyntaxError) {
+func (p *Parser) ParseStatements() ([]Stmt, []*SyntaxError) {
 	stmts := []Stmt{}
 	for !p.isAtEnd() {
-		decl := p.declaration()
+		decl := p.parseStatement()
 		if decl != nil {
 			stmts = append(stmts, *decl)
 		}
@@ -27,8 +27,15 @@ func (p *Parser) Parse() (ret []Stmt, errs []*SyntaxError) {
 	return stmts, p.errors
 }
 
-func (p *Parser) declaration() (ret *Stmt) {
-	// If we hit an error, skip to the next declaration
+func (p *Parser) ParseExpression() (Expr, []*SyntaxError) {
+	expr := p.parseExpression()
+	if expr == nil {
+		return nil, p.errors
+	}
+	return *expr, p.errors
+}
+
+func (p *Parser) parseStatement() (ret *Stmt) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -41,13 +48,32 @@ func (p *Parser) declaration() (ret *Stmt) {
 		}
 	}()
 
-	if p.match(TokenTypeVar) {
-		decl := p.varDeclaration()
-		return &decl
-	}
-
-	stmt := p.statement()
+	stmt := p.declaration()
 	return &stmt
+}
+
+func (p *Parser) parseExpression() (ret *Expr) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			if r == unwindToken {
+				p.synchronize()
+				ret = nil
+			} else {
+				panic(r)
+			}
+		}
+	}()
+
+	expr := p.expression()
+	return &expr
+}
+
+func (p *Parser) declaration() Stmt {
+	if p.match(TokenTypeVar) {
+		return p.varDeclaration()
+	}
+	return p.statement()
 }
 
 func (p *Parser) varDeclaration() Stmt {
@@ -79,7 +105,7 @@ func (p *Parser) statement() Stmt {
 func (p *Parser) block() Stmt {
 	statements := []Stmt{}
 	for !p.isAtEnd() && !p.check(TokenTypeRightBrace) {
-		decl := p.declaration()
+		decl := p.parseStatement()
 		if decl != nil {
 			statements = append(statements, *decl)
 		}

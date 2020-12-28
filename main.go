@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-func run(source string, env *lox.Environment) bool {
+func run(source string, env *lox.Environment, allowExpr bool) bool {
 	scanner := lox.NewScanner(source)
 	tokens, errs := scanner.ScanTokens()
 	if len(errs) > 0 {
@@ -19,16 +19,35 @@ func run(source string, env *lox.Environment) bool {
 	}
 
 	parser := lox.NewParser(tokens)
-	exprs, errs := parser.Parse()
+	stmts, errs := parser.ParseStatements()
 	if len(errs) > 0 {
+		if allowExpr {
+			// Try to parse as an expression. If that works, then
+			// print out the result of evaluating the expression
+			// instead of trying to get a full statement. If neither
+			// work, then still show the errors from trying to parse
+			// as a statement.
+			parser := lox.NewParser(tokens)
+			expr, errs := parser.ParseExpression()
+			if len(errs) == 0 {
+				value, err := expr.Evaluate(env)
+				if err == nil {
+					fmt.Printf("%v\n", value)
+				} else {
+					fmt.Fprintf(os.Stderr, "%v\n", err)
+				}
+				return true
+			}
+		}
+
 		for _, err := range errs {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 		}
 		return false
 	}
 
-	for _, expr := range exprs {
-		err := expr.Execute(env)
+	for _, stmt := range stmts {
+		err := stmt.Execute(env)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 		}
@@ -45,7 +64,7 @@ func runFile(path string) {
 		os.Exit(1)
 	}
 
-	ok := run(string(content), env)
+	ok := run(string(content), env, false)
 	if !ok {
 		os.Exit(65)
 	}
@@ -60,7 +79,7 @@ func runPrompt() {
 			break
 		}
 		line := scanner.Text()
-		run(line, env)
+		run(line, env, true)
 	}
 
 	err := scanner.Err()
