@@ -6,19 +6,22 @@ import (
 
 type Environment struct {
 	enclosing *Environment
-	values    map[string]Value
+	values    map[string]*Value
 }
 
 func NewEnvironment(outer *Environment) *Environment {
 	return &Environment{
 		enclosing: outer,
-		values:    map[string]Value{},
+		values:    map[string]*Value{},
 	}
 }
 
-func (e *Environment) Define(name Token, value Value) *RuntimeError {
-	e.values[name.lexeme] = value
-	return nil
+func (e *Environment) Declare(name Token) {
+	e.values[name.lexeme] = nil
+}
+
+func (e *Environment) Define(name Token, value Value) {
+	e.values[name.lexeme] = &value
 }
 
 func (e *Environment) Assign(name Token, value Value) *RuntimeError {
@@ -33,7 +36,8 @@ func (e *Environment) Assign(name Token, value Value) *RuntimeError {
 			fmt.Sprintf("undefined variable %s", name.lexeme),
 		)
 	}
-	e.values[name.lexeme] = value
+
+	e.values[name.lexeme] = &value
 	return nil
 }
 
@@ -49,5 +53,13 @@ func (e *Environment) Get(name Token) (Value, *RuntimeError) {
 			fmt.Sprintf("undefined variable %s", name.lexeme),
 		)
 	}
-	return value, nil
+
+	if value == nil {
+		return nil, NewRuntimeError(
+			name,
+			fmt.Sprintf("using uninitialized variable %s", name.lexeme),
+		)
+	}
+
+	return *value, nil
 }

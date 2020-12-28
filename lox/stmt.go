@@ -37,20 +37,15 @@ type VarStmt struct {
 }
 
 func (s VarStmt) Execute(env *Environment) *RuntimeError {
-	var value Value = NewNil()
-	if s.initializer != nil {
-		var err *RuntimeError
-		value, err = (*s.initializer).Evaluate(env)
+	if s.initializer == nil {
+		env.Declare(s.name)
+	} else {
+		value, err := (*s.initializer).Evaluate(env)
 		if err != nil {
 			return err
 		}
+		env.Define(s.name, value)
 	}
-
-	err := env.Define(s.name, value)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
