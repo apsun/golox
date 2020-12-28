@@ -19,7 +19,7 @@ func run(source string) bool {
 	}
 
 	parser := lox.NewParser(tokens)
-	expr, errs := parser.Parse()
+	exprs, errs := parser.Parse()
 	if len(errs) > 0 {
 		for _, err := range errs {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -27,11 +27,11 @@ func run(source string) bool {
 		return false
 	}
 
-	value, err := expr.Evaluate()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-	} else {
-		fmt.Printf("%s\n", value.Repr())
+	for _, expr := range exprs {
+		err := expr.Execute()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+		}
 	}
 
 	return true

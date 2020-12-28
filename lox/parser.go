@@ -16,7 +16,7 @@ func NewParser(tokens []Token) *Parser {
 
 var unwindToken = struct{}{}
 
-func (p *Parser) Parse() (ret Expr, errs []*SyntaxError) {
+func (p *Parser) Parse() (ret []Stmt, errs []*SyntaxError) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -28,7 +28,35 @@ func (p *Parser) Parse() (ret Expr, errs []*SyntaxError) {
 			}
 		}
 	}()
-	return p.expression(), nil
+
+	stmts := []Stmt{}
+	for !p.isAtEnd() {
+		stmts = append(stmts, p.statement())
+	}
+	return stmts, nil
+}
+
+func (p *Parser) statement() Stmt {
+	if p.match(TokenTypePrint) {
+		return p.printStatement()
+	}
+	return p.expressionStatement()
+}
+
+func (p *Parser) printStatement() Stmt {
+	value := p.expression()
+	p.consume(TokenTypeSemicolon, "expected ';' after value")
+	return PrintStmt{
+		expression: value,
+	}
+}
+
+func (p *Parser) expressionStatement() Stmt {
+	expr := p.expression()
+	p.consume(TokenTypeSemicolon, "expected ';' after expression")
+	return ExprStmt{
+		expression: expr,
+	}
 }
 
 func (p *Parser) expression() Expr {
