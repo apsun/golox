@@ -93,6 +93,9 @@ func (p *Parser) varDeclaration() Stmt {
 }
 
 func (p *Parser) statement() Stmt {
+	if p.match(TokenTypeIf) {
+		return p.ifStatement()
+	}
 	if p.match(TokenTypePrint) {
 		return p.printStatement()
 	}
@@ -100,6 +103,25 @@ func (p *Parser) statement() Stmt {
 		return p.block()
 	}
 	return p.expressionStatement()
+}
+
+func (p *Parser) ifStatement() Stmt {
+	p.consume(TokenTypeLeftParen, "expected '(' after 'if'")
+	condition := p.expression()
+	p.consume(TokenTypeRightParen, "expected ')' after if condition")
+
+	thenBranch := p.statement()
+	var elseBranch *Stmt = nil
+	if p.match(TokenTypeElse) {
+		tmp := p.statement()
+		elseBranch = &tmp
+	}
+
+	return IfStmt{
+		condition:  condition,
+		thenBranch: thenBranch,
+		elseBranch: elseBranch,
+	}
 }
 
 func (p *Parser) block() Stmt {

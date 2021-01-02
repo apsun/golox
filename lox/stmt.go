@@ -63,3 +63,24 @@ func (s BlockStmt) Execute(env *Environment) *RuntimeError {
 	}
 	return nil
 }
+
+type IfStmt struct {
+	condition  Expr
+	thenBranch Stmt
+	elseBranch *Stmt
+}
+
+func (s IfStmt) Execute(env *Environment) *RuntimeError {
+	val, err := s.condition.Evaluate(env)
+	if err != nil {
+		return err
+	}
+
+	if val.Bool() {
+		return s.thenBranch.Execute(env)
+	} else if s.elseBranch != nil {
+		return (*s.elseBranch).Execute(env)
+	} else {
+		return nil
+	}
+}
