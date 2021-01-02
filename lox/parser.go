@@ -96,6 +96,9 @@ func (p *Parser) varDeclaration() Stmt {
 }
 
 func (p *Parser) statement() Stmt {
+	if p.match(TokenTypeFor) {
+		return p.forStatement()
+	}
 	if p.match(TokenTypeIf) {
 		return p.ifStatement()
 	}
@@ -109,6 +112,63 @@ func (p *Parser) statement() Stmt {
 		return p.block()
 	}
 	return p.expressionStatement()
+}
+
+func (p *Parser) forStatement() Stmt {
+	p.consume(TokenTypeLeftParen, "expected '(' after 'if'")
+
+	var initializer *Stmt
+	if p.match(TokenTypeSemicolon) {
+		initializer = nil
+	} else if p.match(TokenTypeVar) {
+		tmp := p.varDeclaration()
+		initializer = &tmp
+	} else {
+		tmp := p.expressionStatement()
+		initializer = &tmp
+	}
+
+	var condition *Expr = nil
+	if !p.check(TokenTypeSemicolon) {
+		tmp := p.expression()
+		condition = &tmp
+	}
+	p.consume(TokenTypeSemicolon, "expected ';' after condition")
+
+	var increment *Expr = nil
+	if !p.check(TokenTypeRightParen) {
+		tmp := p.expression()
+		increment = &tmp
+	}
+	p.consume(TokenTypeRightParen, "expected ')' after for clauses")
+
+	body := p.statement()
+
+	if increment != nil {
+		body = BlockStmt{
+			statements: []Stmt{
+				body,
+				ExprStmt{expression: *increment},
+			},
+		}
+	}
+
+	if condition == nil {
+		body = WhileStmt{condition: LiteralExpr{value: true}, body: body}
+	} else {
+		body = WhileStmt{condition: *condition, body: body}
+	}
+
+	if initializer != nil {
+		body = BlockStmt{
+			statements: []Stmt{
+				*initializer,
+				body,
+			},
+		}
+	}
+
+	return body
 }
 
 func (p *Parser) ifStatement() Stmt {
