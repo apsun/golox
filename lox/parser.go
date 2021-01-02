@@ -32,6 +32,9 @@ func (p *Parser) ParseExpression() (Expr, []*SyntaxError) {
 	if expr == nil {
 		return nil, p.errors
 	}
+	if !p.isAtEnd() {
+		p.addError(p.peek(), "trailing junk")
+	}
 	return *expr, p.errors
 }
 
