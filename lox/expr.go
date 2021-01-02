@@ -8,8 +8,6 @@ type Expr interface {
 	Evaluate(env *Environment) (Value, *RuntimeError)
 }
 
-// Binary expression
-
 type BinaryExpr struct {
 	left     Expr
 	operator Token
@@ -115,8 +113,6 @@ func (e BinaryExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
 	}
 }
 
-// Grouping expression
-
 type GroupingExpr struct {
 	expression Expr
 }
@@ -128,8 +124,6 @@ func (e GroupingExpr) String() string {
 func (e GroupingExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
 	return e.expression.Evaluate(env)
 }
-
-// Literal expression
 
 type LiteralExpr struct {
 	value interface{}
@@ -153,8 +147,6 @@ func (e LiteralExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
 		panic(fmt.Sprintf("unknown literal type: %T", v))
 	}
 }
-
-// Unary expression
 
 type UnaryExpr struct {
 	operator Token
@@ -245,4 +237,34 @@ func (e AssignExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
 	}
 
 	return value, nil
+}
+
+type LogicalExpr struct {
+	left     Expr
+	operator Token
+	right    Expr
+}
+
+func (e LogicalExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
+	left, err := e.left.Evaluate(env)
+	if err != nil {
+		return nil, err
+	}
+
+	switch e.operator.ty {
+	case TokenTypeAnd:
+		if left.Bool() {
+			return e.right.Evaluate(env)
+		} else {
+			return left, nil
+		}
+	case TokenTypeOr:
+		if left.Bool() {
+			return left, nil
+		} else {
+			return e.right.Evaluate(env)
+		}
+	default:
+		panic(fmt.Sprintf("unknown logical operator: %v", e.operator.ty))
+	}
 }

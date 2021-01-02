@@ -32,7 +32,7 @@ func run(source string, env *lox.Environment, allowExpr bool) bool {
 			if len(errs) == 0 {
 				value, err := expr.Evaluate(env)
 				if err == nil {
-					fmt.Printf("%v\n", value)
+					fmt.Printf("%v\n", value.Repr())
 				} else {
 					fmt.Fprintf(os.Stderr, "%v\n", err)
 				}

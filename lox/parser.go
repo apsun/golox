@@ -204,7 +204,7 @@ func (p *Parser) assignment() Expr {
 }
 
 func (p *Parser) ternary() Expr {
-	expr := p.equality()
+	expr := p.or()
 
 	if p.match(TokenTypeQuestion) {
 		left := p.expression()
@@ -214,6 +214,38 @@ func (p *Parser) ternary() Expr {
 			cond:  expr,
 			left:  left,
 			right: right,
+		}
+	}
+
+	return expr
+}
+
+func (p *Parser) or() Expr {
+	expr := p.and()
+
+	for p.match(TokenTypeOr) {
+		op := p.previous()
+		right := p.and()
+		expr = LogicalExpr{
+			left:     expr,
+			operator: op,
+			right:    right,
+		}
+	}
+
+	return expr
+}
+
+func (p *Parser) and() Expr {
+	expr := p.equality()
+
+	for p.match(TokenTypeAnd) {
+		op := p.previous()
+		right := p.equality()
+		expr = LogicalExpr{
+			left:     expr,
+			operator: op,
+			right:    right,
 		}
 	}
 
