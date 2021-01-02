@@ -84,3 +84,26 @@ func (s IfStmt) Execute(env *Environment) *RuntimeError {
 		return nil
 	}
 }
+
+type WhileStmt struct {
+	condition Expr
+	body      Stmt
+}
+
+func (s WhileStmt) Execute(env *Environment) *RuntimeError {
+	for {
+		val, err := s.condition.Evaluate(env)
+		if err != nil {
+			return err
+		}
+
+		if !val.Bool() {
+			return nil
+		}
+
+		err = s.body.Execute(env)
+		if err != nil {
+			return err
+		}
+	}
+}

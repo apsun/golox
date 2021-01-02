@@ -102,6 +102,9 @@ func (p *Parser) statement() Stmt {
 	if p.match(TokenTypePrint) {
 		return p.printStatement()
 	}
+	if p.match(TokenTypeWhile) {
+		return p.whileStatement()
+	}
 	if p.match(TokenTypeLeftBrace) {
 		return p.block()
 	}
@@ -124,6 +127,18 @@ func (p *Parser) ifStatement() Stmt {
 		condition:  condition,
 		thenBranch: thenBranch,
 		elseBranch: elseBranch,
+	}
+}
+
+func (p *Parser) whileStatement() Stmt {
+	p.consume(TokenTypeLeftParen, "expected '(' after 'while'")
+	condition := p.expression()
+	p.consume(TokenTypeRightParen, "expected ')' after while condition")
+	body := p.statement()
+
+	return WhileStmt{
+		condition: condition,
+		body:      body,
 	}
 }
 
