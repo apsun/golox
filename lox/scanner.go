@@ -21,6 +21,7 @@ var keywords = map[string]TokenType{
 	"true":   TokenTypeTrue,
 	"var":    TokenTypeVar,
 	"while":  TokenTypeWhile,
+	"break":  TokenTypeBreak,
 }
 
 type Scanner struct {

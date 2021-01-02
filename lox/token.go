@@ -47,6 +47,7 @@ const (
 	TokenTypeTrue
 	TokenTypeVar
 	TokenTypeWhile
+	TokenTypeBreak
 	TokenTypeEOF
 )
 
@@ -91,6 +92,7 @@ var tokenTypeStringMap = map[TokenType]string{
 	TokenTypeTrue:         "True",
 	TokenTypeVar:          "Var",
 	TokenTypeWhile:        "While",
+	TokenTypeBreak:        "Break",
 	TokenTypeEOF:          "EOF",
 }
 

@@ -103,7 +103,19 @@ func (s WhileStmt) Execute(env *Environment) *RuntimeError {
 
 		err = s.body.Execute(env)
 		if err != nil {
+			if err == breakError {
+				return nil
+			}
 			return err
 		}
 	}
+}
+
+type BreakStmt struct{}
+
+// Singleton "error" that we use to break out of loops
+var breakError = NewRuntimeErrorNoToken("break")
+
+func (s BreakStmt) Execute(env *Environment) *RuntimeError {
+	return breakError
 }

@@ -1,16 +1,18 @@
 package lox
 
 type Parser struct {
-	tokens  []Token
-	current int
-	errors  []*SyntaxError
+	tokens    []Token
+	current   int
+	errors    []*SyntaxError
+	loopDepth int
 }
 
 func NewParser(tokens []Token) *Parser {
 	return &Parser{
-		tokens:  tokens,
-		current: 0,
-		errors:  []*SyntaxError{},
+		tokens:    tokens,
+		current:   0,
+		errors:    []*SyntaxError{},
+		loopDepth: 0,
 	}
 }
 
@@ -108,6 +110,9 @@ func (p *Parser) statement() Stmt {
 	if p.match(TokenTypeWhile) {
 		return p.whileStatement()
 	}
+	if p.match(TokenTypeBreak) {
+		return p.breakStatement()
+	}
 	if p.match(TokenTypeLeftBrace) {
 		return p.block()
 	}
@@ -142,7 +147,13 @@ func (p *Parser) forStatement() Stmt {
 	}
 	p.consume(TokenTypeRightParen, "expected ')' after for clauses")
 
-	body := p.statement()
+	body := func() Stmt {
+		p.loopDepth++
+		defer func() {
+			p.loopDepth--
+		}()
+		return p.statement()
+	}()
 
 	if increment != nil {
 		body = BlockStmt{
@@ -194,12 +205,28 @@ func (p *Parser) whileStatement() Stmt {
 	p.consume(TokenTypeLeftParen, "expected '(' after 'while'")
 	condition := p.expression()
 	p.consume(TokenTypeRightParen, "expected ')' after while condition")
-	body := p.statement()
+
+	body := func() Stmt {
+		p.loopDepth++
+		defer func() {
+			p.loopDepth--
+		}()
+		return p.statement()
+	}()
 
 	return WhileStmt{
 		condition: condition,
 		body:      body,
 	}
+}
+
+func (p *Parser) breakStatement() Stmt {
+	if p.loopDepth == 0 {
+		p.addError(p.previous(), "break can only be used inside a loop")
+		panic(unwindToken)
+	}
+	p.consume(TokenTypeSemicolon, "expected ';' after 'break'")
+	return BreakStmt{}
 }
 
 func (p *Parser) block() Stmt {
