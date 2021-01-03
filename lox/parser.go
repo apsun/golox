@@ -294,8 +294,9 @@ func (p *Parser) assignment() Expr {
 		if ok {
 			name := varExpr.name
 			return AssignExpr{
-				name:  name,
-				value: value,
+				name:     name,
+				value:    value,
+				distance: new(int),
 			}
 		}
 
@@ -436,7 +437,44 @@ func (p *Parser) unary() Expr {
 		}
 	}
 
-	return p.primary()
+	return p.call()
+}
+
+func (p *Parser) call() Expr {
+	expr := p.primary()
+
+	for {
+		if p.match(TokenTypeLeftParen) {
+			expr = p.finishCall(expr)
+		} else {
+			break
+		}
+	}
+
+	return expr
+}
+
+func (p *Parser) finishCall(callee Expr) Expr {
+	arguments := []Expr{}
+	if !p.check(TokenTypeRightParen) {
+		for {
+			if len(arguments) >= 255 {
+				p.addError(p.peek(), "can't have more than 255 parameters")
+			}
+
+			arguments = append(arguments, p.assignment())
+			if !p.match(TokenTypeComma) {
+				break
+			}
+		}
+	}
+
+	paren := p.consume(TokenTypeRightParen, "expected ')' after parameter list")
+	return CallExpr{
+		callee:    callee,
+		paren:     paren,
+		arguments: arguments,
+	}
 }
 
 func (p *Parser) primary() Expr {
@@ -457,7 +495,7 @@ func (p *Parser) primary() Expr {
 	}
 
 	if p.match(TokenTypeIdentifier) {
-		return VariableExpr{name: p.previous()}
+		return VariableExpr{name: p.previous(), distance: new(int)}
 	}
 
 	if p.match(TokenTypeLeftParen) {

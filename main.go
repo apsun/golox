@@ -6,6 +6,7 @@ import (
 	"github.com/apsun/golox/lox"
 	"io/ioutil"
 	"os"
+	"time"
 )
 
 func run(source string, env *lox.Environment, allowExpr bool) bool {
@@ -17,6 +18,17 @@ func run(source string, env *lox.Environment, allowExpr bool) bool {
 		}
 		return false
 	}
+
+	env.DefineNative(
+		"clock",
+		lox.NewNativeFn(
+			0,
+			"clock",
+			func(env *lox.Environment, args []lox.Value) (lox.Value, *lox.RuntimeError) {
+				return lox.NewNumber(float64(time.Now().UnixNano()) / 1e9), nil
+			},
+		),
+	)
 
 	parser := lox.NewParser(tokens)
 	stmts, errs := parser.ParseStatements()
@@ -30,6 +42,15 @@ func run(source string, env *lox.Environment, allowExpr bool) bool {
 			parser := lox.NewParser(tokens)
 			expr, errs := parser.ParseExpression()
 			if len(errs) == 0 {
+				resolver := lox.NewResolver()
+				rerrs := resolver.ResolveExpression(expr)
+				if len(rerrs) > 0 {
+					for _, err := range rerrs {
+						fmt.Fprintf(os.Stderr, "%v\n", err)
+					}
+					return false
+				}
+
 				value, err := expr.Evaluate(env)
 				if err == nil {
 					fmt.Printf("%v\n", value.Repr())
@@ -41,6 +62,15 @@ func run(source string, env *lox.Environment, allowExpr bool) bool {
 		}
 
 		for _, err := range errs {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+		}
+		return false
+	}
+
+	resolver := lox.NewResolver()
+	rerrs := resolver.ResolveStatements(stmts)
+	if len(rerrs) > 0 {
+		for _, err := range rerrs {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 		}
 		return false

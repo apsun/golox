@@ -6,6 +6,7 @@ import (
 
 type Stmt interface {
 	Execute(env *Environment) *RuntimeError
+	Resolve(r *Resolver)
 }
 
 type ExprStmt struct {
@@ -15,6 +16,10 @@ type ExprStmt struct {
 func (s ExprStmt) Execute(env *Environment) *RuntimeError {
 	_, err := s.expression.Evaluate(env)
 	return err
+}
+
+func (s ExprStmt) Resolve(r *Resolver) {
+	s.expression.Resolve(r)
 }
 
 type PrintStmt struct {
@@ -29,6 +34,10 @@ func (s PrintStmt) Execute(env *Environment) *RuntimeError {
 
 	fmt.Println(val.String())
 	return nil
+}
+
+func (s PrintStmt) Resolve(r *Resolver) {
+	s.expression.Resolve(r)
 }
 
 type VarStmt struct {
@@ -49,6 +58,14 @@ func (s VarStmt) Execute(env *Environment) *RuntimeError {
 	return nil
 }
 
+func (s VarStmt) Resolve(r *Resolver) {
+	r.Declare(s.name)
+	if s.initializer != nil {
+		(*s.initializer).Resolve(r)
+	}
+	r.Define(s.name)
+}
+
 type BlockStmt struct {
 	statements []Stmt
 }
@@ -62,6 +79,15 @@ func (s BlockStmt) Execute(env *Environment) *RuntimeError {
 		}
 	}
 	return nil
+}
+
+func (s BlockStmt) Resolve(r *Resolver) {
+	r.BeginScope()
+	defer r.EndScope()
+
+	for _, stmt := range s.statements {
+		stmt.Resolve(r)
+	}
 }
 
 type IfStmt struct {
@@ -82,6 +108,14 @@ func (s IfStmt) Execute(env *Environment) *RuntimeError {
 		return (*s.elseBranch).Execute(env)
 	} else {
 		return nil
+	}
+}
+
+func (s IfStmt) Resolve(r *Resolver) {
+	s.condition.Resolve(r)
+	s.thenBranch.Resolve(r)
+	if s.elseBranch != nil {
+		(*s.elseBranch).Resolve(r)
 	}
 }
 
@@ -111,6 +145,11 @@ func (s WhileStmt) Execute(env *Environment) *RuntimeError {
 	}
 }
 
+func (s WhileStmt) Resolve(r *Resolver) {
+	s.condition.Resolve(r)
+	s.body.Resolve(r)
+}
+
 type BreakStmt struct{}
 
 // Singleton "error" that we use to break out of loops
@@ -118,4 +157,37 @@ var breakError = NewRuntimeErrorNoToken("break")
 
 func (s BreakStmt) Execute(env *Environment) *RuntimeError {
 	return breakError
+}
+
+func (s BreakStmt) Resolve(r *Resolver) {
+	// No-op
+}
+
+type FnStmt struct {
+	name       Token
+	parameters []Token
+	body       []Stmt
+}
+
+func (s FnStmt) Execute(env *Environment) *RuntimeError {
+	fn := NewLoxFn(s)
+	env.Define(s.name, fn)
+	return nil
+}
+
+func (s FnStmt) Resolve(r *Resolver) {
+	r.Declare(s.name)
+	r.Define(s.name)
+
+	r.BeginScope()
+	defer r.EndScope()
+
+	for _, param := range s.parameters {
+		r.Declare(param)
+		r.Define(param)
+	}
+
+	for _, stmt := range s.body {
+		stmt.Resolve(r)
+	}
 }

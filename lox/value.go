@@ -12,18 +12,11 @@ const (
 	TypeBool
 	TypeNumber
 	TypeString
+	TypeCallable
 )
-
-type Nil struct{}
-type Bool struct{ value bool }
-type Number struct{ value float64 }
-type String struct{ value string }
-
-var nilInstance = Nil{}
 
 type Value interface {
 	Type() Type
-	IsNil() bool
 	Bool() bool
 	CastNumber() *float64
 	CastString() *string
@@ -32,7 +25,16 @@ type Value interface {
 	Repr() string
 }
 
+type CallableValue interface {
+	Value
+	Arity() int
+	Call(env *Environment, args []Value) (Value, *RuntimeError)
+}
+
 // nil
+type Nil struct{}
+
+var nilInstance = Nil{}
 
 func NewNil() Nil {
 	return nilInstance
@@ -40,10 +42,6 @@ func NewNil() Nil {
 
 func (x Nil) Type() Type {
 	return TypeNil
-}
-
-func (x Nil) IsNil() bool {
-	return true
 }
 
 func (x Nil) Bool() bool {
@@ -71,6 +69,7 @@ func (x Nil) Repr() string {
 }
 
 // bool
+type Bool struct{ value bool }
 
 func NewBool(value bool) Bool {
 	return Bool{value: value}
@@ -78,10 +77,6 @@ func NewBool(value bool) Bool {
 
 func (x Bool) Type() Type {
 	return TypeBool
-}
-
-func (x Bool) IsNil() bool {
-	return false
 }
 
 func (x Bool) Bool() bool {
@@ -109,6 +104,7 @@ func (x Bool) Repr() string {
 }
 
 // number
+type Number struct{ value float64 }
 
 func NewNumber(value float64) Number {
 	return Number{value: value}
@@ -116,10 +112,6 @@ func NewNumber(value float64) Number {
 
 func (x Number) Type() Type {
 	return TypeNumber
-}
-
-func (x Number) IsNil() bool {
-	return false
 }
 
 func (x Number) Bool() bool {
@@ -147,6 +139,7 @@ func (x Number) Repr() string {
 }
 
 // string
+type String struct{ value string }
 
 func NewString(value string) String {
 	return String{value: value}
@@ -154,10 +147,6 @@ func NewString(value string) String {
 
 func (x String) Type() Type {
 	return TypeString
-}
-
-func (x String) IsNil() bool {
-	return false
 }
 
 func (x String) Bool() bool {
@@ -182,4 +171,115 @@ func (x String) String() string {
 
 func (x String) Repr() string {
 	return fmt.Sprintf("%q", x.value)
+}
+
+// native fn
+type NativeFnPtr func(env *Environment, args []Value) (Value, *RuntimeError)
+
+type NativeFn struct {
+	arity int
+	name  string
+	fn    NativeFnPtr
+}
+
+func NewNativeFn(arity int, name string, fn NativeFnPtr) *NativeFn {
+	return &NativeFn{
+		arity: arity,
+		name:  name,
+		fn:    fn,
+	}
+}
+
+func (x *NativeFn) Type() Type {
+	return TypeCallable
+}
+
+func (x *NativeFn) Bool() bool {
+	return true
+}
+
+func (x *NativeFn) CastNumber() *float64 {
+	return nil
+}
+
+func (x *NativeFn) CastString() *string {
+	return nil
+}
+
+func (x *NativeFn) Equal(other Value) bool {
+	return x == other
+}
+
+func (x *NativeFn) String() string {
+	return fmt.Sprintf("<native fn '%s'>", x.name)
+}
+
+func (x *NativeFn) Repr() string {
+	return x.String()
+}
+
+func (x *NativeFn) Arity() int {
+	return x.arity
+}
+
+func (x *NativeFn) Call(env *Environment, args []Value) (Value, *RuntimeError) {
+	return x.fn(env, args)
+}
+
+// lox fn
+type LoxFn struct {
+	declaration FnStmt
+}
+
+func NewLoxFn(declaration FnStmt) *LoxFn {
+	return &LoxFn{declaration: declaration}
+}
+
+func (x *LoxFn) Type() Type {
+	return TypeCallable
+}
+
+func (x *LoxFn) Bool() bool {
+	return true
+}
+
+func (x *LoxFn) CastNumber() *float64 {
+	return nil
+}
+
+func (x *LoxFn) CastString() *string {
+	return nil
+}
+
+func (x *LoxFn) Equal(other Value) bool {
+	return x == other
+}
+
+func (x *LoxFn) String() string {
+	return fmt.Sprintf("<fn '%s'>", x.declaration.name.lexeme)
+}
+
+func (x *LoxFn) Repr() string {
+	return x.String()
+}
+
+func (x *LoxFn) Arity() int {
+	return len(x.declaration.parameters)
+}
+
+func (x *LoxFn) Call(env *Environment, args []Value) (Value, *RuntimeError) {
+	calleeEnv := NewEnvironment(env)
+	for i, arg := range args {
+		name := x.declaration.parameters[i]
+		calleeEnv.Define(name, arg)
+	}
+	for _, stmt := range x.declaration.body {
+		err := stmt.Execute(env)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// TODO
+	return NewNil(), nil
 }

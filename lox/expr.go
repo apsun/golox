@@ -6,6 +6,7 @@ import (
 
 type Expr interface {
 	Evaluate(env *Environment) (Value, *RuntimeError)
+	Resolve(r *Resolver)
 }
 
 type BinaryExpr struct {
@@ -113,6 +114,11 @@ func (e BinaryExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
 	}
 }
 
+func (e BinaryExpr) Resolve(r *Resolver) {
+	e.left.Resolve(r)
+	e.right.Resolve(r)
+}
+
 type GroupingExpr struct {
 	expression Expr
 }
@@ -123,6 +129,10 @@ func (e GroupingExpr) String() string {
 
 func (e GroupingExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
 	return e.expression.Evaluate(env)
+}
+
+func (e GroupingExpr) Resolve(r *Resolver) {
+	e.expression.Resolve(r)
 }
 
 type LiteralExpr struct {
@@ -146,6 +156,10 @@ func (e LiteralExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
 	default:
 		panic(fmt.Sprintf("unknown literal type: %T", v))
 	}
+}
+
+func (e LiteralExpr) Resolve(r *Resolver) {
+	// No-op
 }
 
 type UnaryExpr struct {
@@ -184,6 +198,10 @@ func (e UnaryExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
 	}
 }
 
+func (e UnaryExpr) Resolve(r *Resolver) {
+	e.right.Resolve(r)
+}
+
 type TernaryExpr struct {
 	cond  Expr
 	left  Expr
@@ -212,17 +230,31 @@ func (e TernaryExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
 	}
 }
 
+func (e TernaryExpr) Resolve(r *Resolver) {
+	e.cond.Resolve(r)
+	e.left.Resolve(r)
+	e.right.Resolve(r)
+}
+
 type VariableExpr struct {
-	name Token
+	name     Token
+	distance *int
 }
 
 func (e VariableExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
-	return env.Get(e.name)
+	return env.Get(*e.distance, e.name)
+}
+
+func (e VariableExpr) Resolve(r *Resolver) {
+	r.CheckDefined(e.name)
+	distance := r.ResolveLocal(e.name)
+	*e.distance = distance
 }
 
 type AssignExpr struct {
-	name  Token
-	value Expr
+	name     Token
+	value    Expr
+	distance *int
 }
 
 func (e AssignExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
@@ -231,12 +263,18 @@ func (e AssignExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
 		return nil, err
 	}
 
-	err = env.Assign(e.name, value)
+	err = env.Assign(*e.distance, e.name, value)
 	if err != nil {
 		return nil, err
 	}
 
 	return value, nil
+}
+
+func (e AssignExpr) Resolve(r *Resolver) {
+	e.value.Resolve(r)
+	distance := r.ResolveLocal(e.name)
+	*e.distance = distance
 }
 
 type LogicalExpr struct {
@@ -266,5 +304,57 @@ func (e LogicalExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
 		}
 	default:
 		panic(fmt.Sprintf("unknown logical operator: %v", e.operator.ty))
+	}
+}
+
+func (e LogicalExpr) Resolve(r *Resolver) {
+	e.left.Resolve(r)
+	e.right.Resolve(r)
+}
+
+type CallExpr struct {
+	callee    Expr
+	paren     Token
+	arguments []Expr
+}
+
+func (e CallExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
+	callee, err := e.callee.Evaluate(env)
+	if err != nil {
+		return nil, err
+	}
+
+	args := make([]Value, len(e.arguments))
+	for i, argExpr := range e.arguments {
+		arg, err := argExpr.Evaluate(env)
+		if err != nil {
+			return nil, err
+		}
+		args[i] = arg
+	}
+
+	fn, ok := callee.(CallableValue)
+	if !ok {
+		return nil, NewRuntimeError(e.paren, "value is not callable")
+	}
+
+	if fn.Arity() != len(args) {
+		return nil, NewRuntimeError(
+			e.paren,
+			fmt.Sprintf(
+				"expected %d arguments but got %d",
+				fn.Arity(),
+				len(args),
+			),
+		)
+	}
+
+	return fn.Call(env, args)
+}
+
+func (e CallExpr) Resolve(r *Resolver) {
+	e.callee.Resolve(r)
+	for _, arg := range e.arguments {
+		arg.Resolve(r)
 	}
 }
