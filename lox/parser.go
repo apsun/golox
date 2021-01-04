@@ -80,7 +80,7 @@ func (p *Parser) parseExpression() (ret *Expr) {
 
 func (p *Parser) declaration() Stmt {
 	if p.match(TokenTypeFun) {
-		return p.function("function")
+		return p.functionStatement("function")
 	}
 	if p.match(TokenTypeVar) {
 		return p.varDeclaration()
@@ -88,9 +88,17 @@ func (p *Parser) declaration() Stmt {
 	return p.statement()
 }
 
-func (p *Parser) function(kind string) Stmt {
+func (p *Parser) functionStatement(kind string) Stmt {
 	name := p.consume(TokenTypeIdentifier, fmt.Sprintf("expected %s name", kind))
-	p.consume(TokenTypeLeftParen, fmt.Sprintf("expected '(' after %s name", kind))
+	function := p.functionExpression(kind).(FnExpr)
+	return FnStmt{
+		name:     name,
+		function: function,
+	}
+}
+
+func (p *Parser) functionExpression(kind string) Expr {
+	p.consume(TokenTypeLeftParen, fmt.Sprintf("expected '(' after 'fun'", kind))
 	parameters := []Token{}
 	if !p.check(TokenTypeRightParen) {
 		for {
@@ -108,8 +116,7 @@ func (p *Parser) function(kind string) Stmt {
 
 	p.consume(TokenTypeLeftBrace, fmt.Sprintf("expected '{' before %s body", kind))
 	body := p.block().(BlockStmt)
-	return FnStmt{
-		name:       name,
+	return FnExpr{
 		parameters: parameters,
 		body:       body.statements,
 	}
@@ -547,6 +554,10 @@ func (p *Parser) primary() Expr {
 
 	if p.match(TokenTypeIdentifier) {
 		return VariableExpr{name: p.previous(), distance: new(int)}
+	}
+
+	if p.match(TokenTypeFun) {
+		return p.functionExpression("function")
 	}
 
 	if p.match(TokenTypeLeftParen) {

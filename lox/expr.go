@@ -388,3 +388,26 @@ func (e CallExpr) Resolve(r *Resolver) {
 		arg.Resolve(r)
 	}
 }
+
+type FnExpr struct {
+	parameters []Token
+	body       []Stmt
+}
+
+func (e FnExpr) Evaluate(env *Environment) (Value, RuntimeException) {
+	return NewLoxFn(nil, e, env), nil
+}
+
+func (e FnExpr) Resolve(r *Resolver) {
+	r.BeginScope()
+	defer r.EndScope()
+
+	for _, param := range e.parameters {
+		r.Declare(param)
+		r.Define(param)
+	}
+
+	for _, stmt := range e.body {
+		stmt.Resolve(r)
+	}
+}

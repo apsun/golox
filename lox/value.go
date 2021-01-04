@@ -184,12 +184,17 @@ func (x *NativeFn) Fn() NativeFnPtr {
 
 // lox fn
 type LoxFn struct {
-	declaration FnStmt
+	name        *string
+	declaration FnExpr
 	env         *Environment
 }
 
-func NewLoxFn(declaration FnStmt, env *Environment) *LoxFn {
-	return &LoxFn{declaration: declaration, env: env}
+func NewLoxFn(name *string, declaration FnExpr, env *Environment) *LoxFn {
+	return &LoxFn{
+		name:        name,
+		declaration: declaration,
+		env:         env,
+	}
 }
 
 func (x *LoxFn) Type() Type {
@@ -205,7 +210,11 @@ func (x *LoxFn) Equal(other Value) bool {
 }
 
 func (x *LoxFn) String() string {
-	return fmt.Sprintf("<fn '%s'>", x.declaration.name.lexeme)
+	if x.name != nil {
+		return fmt.Sprintf("<fn '%s'>", *x.name)
+	} else {
+		return "<anonymous fn>"
+	}
 }
 
 func (x *LoxFn) Repr() string {
@@ -216,6 +225,6 @@ func (x *LoxFn) Arity() int {
 	return len(x.declaration.parameters)
 }
 
-func (x *LoxFn) FnWithEnv() (FnStmt, *Environment) {
+func (x *LoxFn) FnWithEnv() (FnExpr, *Environment) {
 	return x.declaration, x.env
 }

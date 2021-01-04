@@ -162,13 +162,12 @@ func (s BreakStmt) Resolve(r *Resolver) {
 }
 
 type FnStmt struct {
-	name       Token
-	parameters []Token
-	body       []Stmt
+	name     Token
+	function FnExpr
 }
 
 func (s FnStmt) Execute(env *Environment) RuntimeException {
-	fn := NewLoxFn(s, env)
+	fn := NewLoxFn(&s.name.lexeme, s.function, env)
 	env.Define(s.name, fn)
 	return nil
 }
@@ -176,18 +175,7 @@ func (s FnStmt) Execute(env *Environment) RuntimeException {
 func (s FnStmt) Resolve(r *Resolver) {
 	r.Declare(s.name)
 	r.Define(s.name)
-
-	r.BeginScope()
-	defer r.EndScope()
-
-	for _, param := range s.parameters {
-		r.Declare(param)
-		r.Define(param)
-	}
-
-	for _, stmt := range s.body {
-		stmt.Resolve(r)
-	}
+	s.function.Resolve(r)
 }
 
 type ReturnStmt struct {
