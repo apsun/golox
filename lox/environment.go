@@ -46,11 +46,17 @@ func (e *Environment) Assign(distance int, name Token, value Value) RuntimeExcep
 }
 
 func (e *Environment) Get(distance int, name Token) (Value, RuntimeException) {
-	value := e.ancestor(distance).values[name.lexeme]
+	value, ok := e.ancestor(distance).values[name.lexeme]
+	if !ok {
+		return nil, NewRuntimeError(
+			name,
+			fmt.Sprintf("using undeclared variable '%s'", name.lexeme),
+		)
+	}
 	if value == nil {
 		return nil, NewRuntimeError(
 			name,
-			fmt.Sprintf("using uninitialized variable %s", name.lexeme),
+			fmt.Sprintf("using uninitialized variable '%s'", name.lexeme),
 		)
 	}
 	return *value, nil

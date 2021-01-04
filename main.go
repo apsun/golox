@@ -9,6 +9,11 @@ import (
 	"time"
 )
 
+func clock(args []lox.Value) (lox.Value, lox.RuntimeException) {
+	now := float64(time.Now().UnixNano()) / 1e9
+	return lox.NewNumber(now), nil
+}
+
 func run(source string, env *lox.Environment, allowExpr bool) bool {
 	scanner := lox.NewScanner(source)
 	tokens, errs := scanner.ScanTokens()
@@ -19,16 +24,7 @@ func run(source string, env *lox.Environment, allowExpr bool) bool {
 		return false
 	}
 
-	env.DefineNative(
-		"clock",
-		lox.NewNativeFn(
-			0,
-			"clock",
-			func(args []lox.Value) (lox.Value, lox.RuntimeException) {
-				return lox.NewNumber(float64(time.Now().UnixNano()) / 1e9), nil
-			},
-		),
-	)
+	env.DefineNative("clock", lox.NewNativeFn(0, "clock", clock))
 
 	parser := lox.NewParser(tokens)
 	stmts, errs := parser.ParseStatements()
