@@ -5,7 +5,7 @@ import (
 )
 
 type Expr interface {
-	Evaluate(env *Environment) (Value, *RuntimeError)
+	Evaluate(env *Environment) (Value, RuntimeException)
 	Resolve(r *Resolver)
 }
 
@@ -24,7 +24,7 @@ func (e BinaryExpr) String() string {
 	)
 }
 
-func (e BinaryExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
+func (e BinaryExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 	left, err := e.left.Evaluate(env)
 	if err != nil {
 		return nil, err
@@ -127,7 +127,7 @@ func (e GroupingExpr) String() string {
 	return fmt.Sprintf("GroupingExpr{expression: %v}", e.expression)
 }
 
-func (e GroupingExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
+func (e GroupingExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 	return e.expression.Evaluate(env)
 }
 
@@ -143,7 +143,7 @@ func (e LiteralExpr) String() string {
 	return fmt.Sprintf("LiteralExpr{value: %#v}", e.value)
 }
 
-func (e LiteralExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
+func (e LiteralExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 	switch v := e.value.(type) {
 	case nil:
 		return NewNil(), nil
@@ -175,7 +175,7 @@ func (e UnaryExpr) String() string {
 	)
 }
 
-func (e UnaryExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
+func (e UnaryExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 	r, err := e.right.Evaluate(env)
 	if err != nil {
 		return nil, err
@@ -217,7 +217,7 @@ func (e TernaryExpr) String() string {
 	)
 }
 
-func (e TernaryExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
+func (e TernaryExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 	cond, err := e.cond.Evaluate(env)
 	if err != nil {
 		return nil, err
@@ -241,7 +241,7 @@ type VariableExpr struct {
 	distance *int
 }
 
-func (e VariableExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
+func (e VariableExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 	return env.Get(*e.distance, e.name)
 }
 
@@ -257,7 +257,7 @@ type AssignExpr struct {
 	distance *int
 }
 
-func (e AssignExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
+func (e AssignExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 	value, err := e.value.Evaluate(env)
 	if err != nil {
 		return nil, err
@@ -283,7 +283,7 @@ type LogicalExpr struct {
 	right    Expr
 }
 
-func (e LogicalExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
+func (e LogicalExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 	left, err := e.left.Evaluate(env)
 	if err != nil {
 		return nil, err
@@ -318,7 +318,7 @@ type CallExpr struct {
 	arguments []Expr
 }
 
-func (e CallExpr) Evaluate(env *Environment) (Value, *RuntimeError) {
+func (e CallExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 	callee, err := e.callee.Evaluate(env)
 	if err != nil {
 		return nil, err

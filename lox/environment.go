@@ -40,12 +40,12 @@ func (e *Environment) DefineNative(name string, value Value) {
 	e.values[name] = &value
 }
 
-func (e *Environment) Assign(distance int, name Token, value Value) *RuntimeError {
+func (e *Environment) Assign(distance int, name Token, value Value) RuntimeException {
 	e.ancestor(distance).values[name.lexeme] = &value
 	return nil
 }
 
-func (e *Environment) Get(distance int, name Token) (Value, *RuntimeError) {
+func (e *Environment) Get(distance int, name Token) (Value, RuntimeException) {
 	value := e.ancestor(distance).values[name.lexeme]
 	if value == nil {
 		return nil, NewRuntimeError(

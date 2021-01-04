@@ -24,7 +24,7 @@ func run(source string, env *lox.Environment, allowExpr bool) bool {
 		lox.NewNativeFn(
 			0,
 			"clock",
-			func(env *lox.Environment, args []lox.Value) (lox.Value, *lox.RuntimeError) {
+			func(env *lox.Environment, args []lox.Value) (lox.Value, lox.RuntimeException) {
 				return lox.NewNumber(float64(time.Now().UnixNano()) / 1e9), nil
 			},
 		),

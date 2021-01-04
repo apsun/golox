@@ -35,34 +35,30 @@ func (e *SyntaxError) Error() string {
 	}
 }
 
+type RuntimeException interface{}
+
 type RuntimeError struct {
-	token   *Token
+	token   Token
 	message string
+}
+
+type BreakException struct{}
+
+type ReturnException struct {
+	value Value
 }
 
 func NewRuntimeError(token Token, message string) *RuntimeError {
 	return &RuntimeError{
-		token:   &token,
-		message: message,
-	}
-}
-
-func NewRuntimeErrorNoToken(message string) *RuntimeError {
-	return &RuntimeError{
-		token:   nil,
+		token:   token,
 		message: message,
 	}
 }
 
 func (e *RuntimeError) Error() string {
-	line := -1
-	if e.token != nil {
-		line = e.token.line
-	}
-
 	return fmt.Sprintf(
 		"runtime error on line %d: %s",
-		line,
+		e.token.line,
 		e.message,
 	)
 }

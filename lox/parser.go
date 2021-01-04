@@ -1,5 +1,9 @@
 package lox
 
+import (
+	"fmt"
+)
+
 type Parser struct {
 	tokens    []Token
 	current   int
@@ -75,10 +79,40 @@ func (p *Parser) parseExpression() (ret *Expr) {
 }
 
 func (p *Parser) declaration() Stmt {
+	if p.match(TokenTypeFun) {
+		return p.function("function")
+	}
 	if p.match(TokenTypeVar) {
 		return p.varDeclaration()
 	}
 	return p.statement()
+}
+
+func (p *Parser) function(kind string) Stmt {
+	name := p.consume(TokenTypeIdentifier, fmt.Sprintf("expected %s name", kind))
+	p.consume(TokenTypeLeftParen, fmt.Sprintf("expected '(' after %s name", kind))
+	parameters := []Token{}
+	if !p.check(TokenTypeRightParen) {
+		for {
+			if len(parameters) >= 255 {
+				p.addError(p.peek(), "can't have more than 255 parameters")
+			}
+			name := p.consume(TokenTypeIdentifier, "expected parameter name")
+			parameters = append(parameters, name)
+			if !p.match(TokenTypeComma) {
+				break
+			}
+		}
+	}
+	p.consume(TokenTypeRightParen, "expected ')' after parameters")
+
+	p.consume(TokenTypeLeftBrace, fmt.Sprintf("expected '{' before %s body", kind))
+	body := p.block().(BlockStmt)
+	return FnStmt{
+		name:       name,
+		parameters: parameters,
+		body:       body,
+	}
 }
 
 func (p *Parser) varDeclaration() Stmt {
@@ -106,6 +140,9 @@ func (p *Parser) statement() Stmt {
 	}
 	if p.match(TokenTypePrint) {
 		return p.printStatement()
+	}
+	if p.match(TokenTypeReturn) {
+		return p.returnStatement()
 	}
 	if p.match(TokenTypeWhile) {
 		return p.whileStatement()
@@ -217,6 +254,20 @@ func (p *Parser) whileStatement() Stmt {
 	return WhileStmt{
 		condition: condition,
 		body:      body,
+	}
+}
+
+func (p *Parser) returnStatement() Stmt {
+	keyword := p.previous()
+	var value *Expr = nil
+	if !p.check(TokenTypeSemicolon) {
+		tmp := p.expression()
+		value = &tmp
+	}
+	p.consume(TokenTypeSemicolon, "expected ';' after return value")
+	return ReturnStmt{
+		keyword: keyword,
+		value:   value,
 	}
 }
 

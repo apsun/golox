@@ -5,7 +5,7 @@ import (
 )
 
 type Stmt interface {
-	Execute(env *Environment) *RuntimeError
+	Execute(env *Environment) RuntimeException
 	Resolve(r *Resolver)
 }
 
@@ -13,7 +13,7 @@ type ExprStmt struct {
 	expression Expr
 }
 
-func (s ExprStmt) Execute(env *Environment) *RuntimeError {
+func (s ExprStmt) Execute(env *Environment) RuntimeException {
 	_, err := s.expression.Evaluate(env)
 	return err
 }
@@ -26,7 +26,7 @@ type PrintStmt struct {
 	expression Expr
 }
 
-func (s PrintStmt) Execute(env *Environment) *RuntimeError {
+func (s PrintStmt) Execute(env *Environment) RuntimeException {
 	val, err := s.expression.Evaluate(env)
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ type VarStmt struct {
 	initializer *Expr
 }
 
-func (s VarStmt) Execute(env *Environment) *RuntimeError {
+func (s VarStmt) Execute(env *Environment) RuntimeException {
 	if s.initializer == nil {
 		env.Declare(s.name)
 	} else {
@@ -70,7 +70,7 @@ type BlockStmt struct {
 	statements []Stmt
 }
 
-func (s BlockStmt) Execute(env *Environment) *RuntimeError {
+func (s BlockStmt) Execute(env *Environment) RuntimeException {
 	innerEnv := NewEnvironment(env)
 	for _, stmt := range s.statements {
 		err := stmt.Execute(innerEnv)
@@ -96,7 +96,7 @@ type IfStmt struct {
 	elseBranch *Stmt
 }
 
-func (s IfStmt) Execute(env *Environment) *RuntimeError {
+func (s IfStmt) Execute(env *Environment) RuntimeException {
 	val, err := s.condition.Evaluate(env)
 	if err != nil {
 		return err
@@ -124,7 +124,7 @@ type WhileStmt struct {
 	body      Stmt
 }
 
-func (s WhileStmt) Execute(env *Environment) *RuntimeError {
+func (s WhileStmt) Execute(env *Environment) RuntimeException {
 	for {
 		val, err := s.condition.Evaluate(env)
 		if err != nil {
@@ -137,7 +137,8 @@ func (s WhileStmt) Execute(env *Environment) *RuntimeError {
 
 		err = s.body.Execute(env)
 		if err != nil {
-			if err == breakError {
+			_, ok := err.(BreakException)
+			if ok {
 				return nil
 			}
 			return err
@@ -152,11 +153,8 @@ func (s WhileStmt) Resolve(r *Resolver) {
 
 type BreakStmt struct{}
 
-// Singleton "error" that we use to break out of loops
-var breakError = NewRuntimeErrorNoToken("break")
-
-func (s BreakStmt) Execute(env *Environment) *RuntimeError {
-	return breakError
+func (s BreakStmt) Execute(env *Environment) RuntimeException {
+	return BreakException{}
 }
 
 func (s BreakStmt) Resolve(r *Resolver) {
@@ -166,10 +164,10 @@ func (s BreakStmt) Resolve(r *Resolver) {
 type FnStmt struct {
 	name       Token
 	parameters []Token
-	body       []Stmt
+	body       BlockStmt
 }
 
-func (s FnStmt) Execute(env *Environment) *RuntimeError {
+func (s FnStmt) Execute(env *Environment) RuntimeException {
 	fn := NewLoxFn(s)
 	env.Define(s.name, fn)
 	return nil
@@ -187,7 +185,30 @@ func (s FnStmt) Resolve(r *Resolver) {
 		r.Define(param)
 	}
 
-	for _, stmt := range s.body {
+	for _, stmt := range s.body.statements {
 		stmt.Resolve(r)
+	}
+}
+
+type ReturnStmt struct {
+	keyword Token
+	value   *Expr
+}
+
+func (s ReturnStmt) Execute(env *Environment) RuntimeException {
+	if s.value == nil {
+		return ReturnException{value: NewNil()}
+	}
+
+	value, err := (*s.value).Evaluate(env)
+	if err != nil {
+		return err
+	}
+	return ReturnException{value: value}
+}
+
+func (s ReturnStmt) Resolve(r *Resolver) {
+	if s.value != nil {
+		(*s.value).Resolve(r)
 	}
 }

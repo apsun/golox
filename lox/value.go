@@ -28,7 +28,7 @@ type Value interface {
 type CallableValue interface {
 	Value
 	Arity() int
-	Call(env *Environment, args []Value) (Value, *RuntimeError)
+	Call(env *Environment, args []Value) (Value, RuntimeException)
 }
 
 // nil
@@ -174,7 +174,7 @@ func (x String) Repr() string {
 }
 
 // native fn
-type NativeFnPtr func(env *Environment, args []Value) (Value, *RuntimeError)
+type NativeFnPtr func(env *Environment, args []Value) (Value, RuntimeException)
 
 type NativeFn struct {
 	arity int
@@ -222,7 +222,7 @@ func (x *NativeFn) Arity() int {
 	return x.arity
 }
 
-func (x *NativeFn) Call(env *Environment, args []Value) (Value, *RuntimeError) {
+func (x *NativeFn) Call(env *Environment, args []Value) (Value, RuntimeException) {
 	return x.fn(env, args)
 }
 
@@ -267,19 +267,21 @@ func (x *LoxFn) Arity() int {
 	return len(x.declaration.parameters)
 }
 
-func (x *LoxFn) Call(env *Environment, args []Value) (Value, *RuntimeError) {
-	calleeEnv := NewEnvironment(env)
+func (x *LoxFn) Call(env *Environment, args []Value) (Value, RuntimeException) {
+	calleeEnv := NewEnvironment(env) // TODO: WRONG env
 	for i, arg := range args {
 		name := x.declaration.parameters[i]
 		calleeEnv.Define(name, arg)
 	}
-	for _, stmt := range x.declaration.body {
-		err := stmt.Execute(env)
-		if err != nil {
-			return nil, err
+
+	err := x.declaration.body.Execute(calleeEnv)
+	if err != nil {
+		ret, ok := err.(ReturnException)
+		if ok {
+			return ret.value, nil
 		}
+		return nil, err
 	}
 
-	// TODO
 	return NewNil(), nil
 }
