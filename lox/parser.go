@@ -9,6 +9,7 @@ type Parser struct {
 	current   int
 	errors    []*SyntaxError
 	loopDepth int
+	fnDepth   int
 }
 
 func NewParser(tokens []Token) *Parser {
@@ -115,7 +116,13 @@ func (p *Parser) functionExpression(kind string) Expr {
 	p.consume(TokenTypeRightParen, "expected ')' after parameters")
 
 	p.consume(TokenTypeLeftBrace, fmt.Sprintf("expected '{' before %s body", kind))
-	body := p.block().(BlockStmt)
+	body := func() BlockStmt {
+		p.fnDepth++
+		defer func() {
+			p.fnDepth--
+		}()
+		return p.block().(BlockStmt)
+	}()
 	return FnExpr{
 		parameters: parameters,
 		body:       body.statements,
@@ -265,6 +272,10 @@ func (p *Parser) whileStatement() Stmt {
 }
 
 func (p *Parser) returnStatement() Stmt {
+	if p.fnDepth == 0 {
+		p.addError(p.previous(), "return can only be used inside a function")
+	}
+
 	keyword := p.previous()
 	var value *Expr = nil
 	if !p.check(TokenTypeSemicolon) {
@@ -281,7 +292,6 @@ func (p *Parser) returnStatement() Stmt {
 func (p *Parser) breakStatement() Stmt {
 	if p.loopDepth == 0 {
 		p.addError(p.previous(), "break can only be used inside a loop")
-		panic(unwindToken)
 	}
 	p.consume(TokenTypeSemicolon, "expected ';' after 'break'")
 	return BreakStmt{}
