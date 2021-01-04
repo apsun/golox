@@ -25,21 +25,27 @@ func (e *ResolverError) String() string {
 	)
 }
 
+type localVar struct {
+	token   Token
+	usages  int
+	defined bool
+}
+
 type Resolver struct {
-	scopes []map[string]bool
+	scopes []map[string]*localVar
 	errors []*ResolverError
 }
 
 func NewResolver() *Resolver {
 	return &Resolver{
-		scopes: []map[string]bool{
-			map[string]bool{},
+		scopes: []map[string]*localVar{
+			map[string]*localVar{},
 		},
 		errors: []*ResolverError{},
 	}
 }
 
-func (r *Resolver) currentScope() map[string]bool {
+func (r *Resolver) currentScope() map[string]*localVar {
 	return r.scopes[len(r.scopes)-1]
 }
 
@@ -60,10 +66,16 @@ func (r *Resolver) ResolveExpression(expr Expr) []*ResolverError {
 }
 
 func (r *Resolver) BeginScope() {
-	r.scopes = append(r.scopes, map[string]bool{})
+	r.scopes = append(r.scopes, map[string]*localVar{})
 }
 
 func (r *Resolver) EndScope() {
+	scope := r.scopes[len(r.scopes)-1]
+	for name, v := range scope {
+		if v.usages == 0 && name[0] != '_' {
+			r.addError(v.token, fmt.Sprintf("'%s' declared but not used", name))
+		}
+	}
 	r.scopes = r.scopes[:len(r.scopes)-1]
 }
 
@@ -73,18 +85,22 @@ func (r *Resolver) Declare(name Token) {
 	if ok {
 		r.addError(name, fmt.Sprintf("'%s' already declared in this scope", name.lexeme))
 	}
-	scope[name.lexeme] = false
+	scope[name.lexeme] = &localVar{
+		token:   name,
+		usages:  0,
+		defined: false,
+	}
 }
 
 func (r *Resolver) Define(name Token) {
 	scope := r.currentScope()
-	scope[name.lexeme] = true
+	scope[name.lexeme].defined = true
 }
 
 func (r *Resolver) CheckDefined(name Token) {
 	scope := r.currentScope()
-	ready, ok := scope[name.lexeme]
-	if !ready && ok {
+	v, ok := scope[name.lexeme]
+	if ok && !v.defined {
 		r.addError(name, fmt.Sprintf("cannot refer to '%s' in its own initializer", name.lexeme))
 	}
 }
@@ -92,8 +108,9 @@ func (r *Resolver) CheckDefined(name Token) {
 func (r *Resolver) ResolveLocal(name Token) int {
 	for i := range r.scopes {
 		scope := r.scopes[len(r.scopes)-1-i]
-		_, ok := scope[name.lexeme]
+		v, ok := scope[name.lexeme]
 		if ok {
+			v.usages++
 			return i
 		}
 	}
