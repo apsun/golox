@@ -164,11 +164,11 @@ func (s BreakStmt) Resolve(r *Resolver) {
 type FnStmt struct {
 	name       Token
 	parameters []Token
-	body       BlockStmt
+	body       []Stmt
 }
 
 func (s FnStmt) Execute(env *Environment) RuntimeException {
-	fn := NewLoxFn(s)
+	fn := NewLoxFn(s, env)
 	env.Define(s.name, fn)
 	return nil
 }
@@ -185,7 +185,7 @@ func (s FnStmt) Resolve(r *Resolver) {
 		r.Define(param)
 	}
 
-	for _, stmt := range s.body.statements {
+	for _, stmt := range s.body {
 		stmt.Resolve(r)
 	}
 }

@@ -17,7 +17,12 @@ func newResolverError(token Token, message string) *ResolverError {
 }
 
 func (e *ResolverError) String() string {
-	return fmt.Sprintf("resolver error on line %d: %s", e.token.line, e.message)
+	return fmt.Sprintf(
+		"resolver error on line %d at %s: %s",
+		e.token.line,
+		e.token.lexeme,
+		e.message,
+	)
 }
 
 type Resolver struct {
@@ -66,7 +71,7 @@ func (r *Resolver) Declare(name Token) {
 	scope := r.currentScope()
 	_, ok := scope[name.lexeme]
 	if ok {
-		r.addError(name, "variable already defined in this scope")
+		r.addError(name, fmt.Sprintf("'%s' already declared in this scope", name.lexeme))
 	}
 	scope[name.lexeme] = false
 }
@@ -80,7 +85,7 @@ func (r *Resolver) CheckDefined(name Token) {
 	scope := r.currentScope()
 	ready, ok := scope[name.lexeme]
 	if !ready && ok {
-		r.addError(name, "reading variable in initializer")
+		r.addError(name, fmt.Sprintf("cannot refer to '%s' in its own initializer", name.lexeme))
 	}
 }
 

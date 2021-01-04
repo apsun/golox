@@ -349,7 +349,7 @@ func (e CallExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 		)
 	}
 
-	return fn.Call(env, args)
+	return fn.Call(args)
 }
 
 func (e CallExpr) Resolve(r *Resolver) {

@@ -111,7 +111,7 @@ func (p *Parser) function(kind string) Stmt {
 	return FnStmt{
 		name:       name,
 		parameters: parameters,
-		body:       body,
+		body:       body.statements,
 	}
 }
 
