@@ -44,9 +44,7 @@ func (e BinaryExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 		TokenTypeLess,
 		TokenTypeLessEqual:
 
-		l := left.CastNumber()
-		r := right.CastNumber()
-		if l == nil || r == nil {
+		if left.Type() != TypeNumber || right.Type() != TypeNumber {
 			return nil, NewRuntimeError(
 				e.operator,
 				fmt.Sprintf(
@@ -56,49 +54,44 @@ func (e BinaryExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 			)
 		}
 
+		l := left.(Number).Float()
+		r := right.(Number).Float()
+
 		switch e.operator.ty {
 		case TokenTypeMinus:
-			return NewNumber(*l - *r), nil
+			return NewNumber(l - r), nil
 		case TokenTypeSlash:
-			if *r == 0 {
+			if r == 0 {
 				return nil, NewRuntimeError(
 					e.operator,
 					fmt.Sprintf("division by zero"),
 				)
 			}
-			return NewNumber(*l / *r), nil
+			return NewNumber(l / r), nil
 		case TokenTypeStar:
-			return NewNumber(*l * *r), nil
+			return NewNumber(l * r), nil
 		case TokenTypeGreater:
-			return NewBool(*l > *r), nil
+			return NewBool(l > r), nil
 		case TokenTypeGreaterEqual:
-			return NewBool(*l >= *r), nil
+			return NewBool(l >= r), nil
 		case TokenTypeLess:
-			return NewBool(*l < *r), nil
+			return NewBool(l < r), nil
 		case TokenTypeLessEqual:
-			return NewBool(*l <= *r), nil
+			return NewBool(l <= r), nil
 		default:
 			panic("unreachable")
 		}
 	case TokenTypePlus:
-		ln := left.CastNumber()
-		rn := right.CastNumber()
-		if ln != nil && rn != nil {
-			return NewNumber(*ln + *rn), nil
+		if left.Type() == TypeNumber && right.Type() == TypeNumber {
+			ln := left.(Number).Float()
+			rn := right.(Number).Float()
+			return NewNumber(ln + rn), nil
 		}
 
-		ls := left.CastString()
-		rs := right.CastString()
-		if ls != nil && rs != nil {
-			return NewString(*ls + *rs), nil
-		}
-
-		if ls != nil {
-			return NewString(*ls + right.String()), nil
-		}
-
-		if rs != nil {
-			return NewString(left.String() + *rs), nil
+		if left.Type() == TypeString || right.Type() == TypeString {
+			ls := left.String()
+			rs := right.String()
+			return NewString(ls + rs), nil
 		}
 
 		return nil, NewRuntimeError(
@@ -109,6 +102,8 @@ func (e BinaryExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 		return NewBool(!left.Equal(right)), nil
 	case TokenTypeEqualEqual:
 		return NewBool(left.Equal(right)), nil
+	case TokenTypeComma:
+		return right, nil
 	default:
 		panic(fmt.Sprintf("unknown binary operator: %v", e.operator.ty))
 	}
@@ -185,14 +180,14 @@ func (e UnaryExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 	case TokenTypeBang:
 		return NewBool(!r.Bool()), nil
 	case TokenTypeMinus:
-		rn := r.CastNumber()
-		if rn == nil {
+		if r.Type() != TypeNumber {
 			return nil, NewRuntimeError(
 				e.operator,
 				"unary - operand must be a number",
 			)
 		}
-		return NewNumber(-*rn), nil
+		rn := r.(Number).Float()
+		return NewNumber(-rn), nil
 	default:
 		panic(fmt.Sprintf("unknown unary operator: %v", e.operator.ty))
 	}
@@ -318,6 +313,29 @@ type CallExpr struct {
 	arguments []Expr
 }
 
+func (e CallExpr) callLoxFn(fn *LoxFn, args []Value) (Value, RuntimeException) {
+	declaration, env := fn.FnWithEnv()
+
+	calleeEnv := NewEnvironment(env)
+	for i, arg := range args {
+		name := declaration.parameters[i]
+		calleeEnv.Define(name, arg)
+	}
+
+	for _, stmt := range declaration.body {
+		err := stmt.Execute(calleeEnv)
+		if err != nil {
+			ret, ok := err.(ReturnException)
+			if ok {
+				return ret.value, nil
+			}
+			return nil, err
+		}
+	}
+
+	return NewNil(), nil
+}
+
 func (e CallExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 	callee, err := e.callee.Evaluate(env)
 	if err != nil {
@@ -333,23 +351,35 @@ func (e CallExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 		args[i] = arg
 	}
 
-	fn, ok := callee.(CallableValue)
-	if !ok {
+	var arity int
+	switch callee := callee.(type) {
+	case *NativeFn:
+		arity = callee.Arity()
+	case *LoxFn:
+		arity = callee.Arity()
+	default:
 		return nil, NewRuntimeError(e.paren, "value is not callable")
 	}
 
-	if fn.Arity() != len(args) {
+	if arity != len(args) {
 		return nil, NewRuntimeError(
 			e.paren,
 			fmt.Sprintf(
 				"expected %d arguments but got %d",
-				fn.Arity(),
+				arity,
 				len(args),
 			),
 		)
 	}
 
-	return fn.Call(args)
+	switch callee := callee.(type) {
+	case *NativeFn:
+		return callee.Fn()(args)
+	case *LoxFn:
+		return e.callLoxFn(callee, args)
+	default:
+		panic("unreachable")
+	}
 }
 
 func (e CallExpr) Resolve(r *Resolver) {

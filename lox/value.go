@@ -18,17 +18,9 @@ const (
 type Value interface {
 	Type() Type
 	Bool() bool
-	CastNumber() *float64
-	CastString() *string
 	Equal(other Value) bool
 	String() string
 	Repr() string
-}
-
-type CallableValue interface {
-	Value
-	Arity() int
-	Call(args []Value) (Value, RuntimeException)
 }
 
 // nil
@@ -46,14 +38,6 @@ func (x Nil) Type() Type {
 
 func (x Nil) Bool() bool {
 	return false
-}
-
-func (x Nil) CastNumber() *float64 {
-	return nil
-}
-
-func (x Nil) CastString() *string {
-	return nil
 }
 
 func (x Nil) Equal(other Value) bool {
@@ -83,14 +67,6 @@ func (x Bool) Bool() bool {
 	return x.value
 }
 
-func (x Bool) CastNumber() *float64 {
-	return nil
-}
-
-func (x Bool) CastString() *string {
-	return nil
-}
-
 func (x Bool) Equal(other Value) bool {
 	return other.Type() == TypeBool && x.value == other.(Bool).value
 }
@@ -118,14 +94,6 @@ func (x Number) Bool() bool {
 	return true
 }
 
-func (x Number) CastNumber() *float64 {
-	return &x.value
-}
-
-func (x Number) CastString() *string {
-	return nil
-}
-
 func (x Number) Equal(other Value) bool {
 	return other.Type() == TypeNumber && x.value == other.(Number).value
 }
@@ -136,6 +104,10 @@ func (x Number) String() string {
 
 func (x Number) Repr() string {
 	return x.String()
+}
+
+func (x Number) Float() float64 {
+	return x.value
 }
 
 // string
@@ -151,14 +123,6 @@ func (x String) Type() Type {
 
 func (x String) Bool() bool {
 	return true
-}
-
-func (x String) CastNumber() *float64 {
-	return nil
-}
-
-func (x String) CastString() *string {
-	return &x.value
 }
 
 func (x String) Equal(other Value) bool {
@@ -198,14 +162,6 @@ func (x *NativeFn) Bool() bool {
 	return true
 }
 
-func (x *NativeFn) CastNumber() *float64 {
-	return nil
-}
-
-func (x *NativeFn) CastString() *string {
-	return nil
-}
-
 func (x *NativeFn) Equal(other Value) bool {
 	return x == other
 }
@@ -222,8 +178,8 @@ func (x *NativeFn) Arity() int {
 	return x.arity
 }
 
-func (x *NativeFn) Call(args []Value) (Value, RuntimeException) {
-	return x.fn(args)
+func (x *NativeFn) Fn() NativeFnPtr {
+	return x.fn
 }
 
 // lox fn
@@ -244,14 +200,6 @@ func (x *LoxFn) Bool() bool {
 	return true
 }
 
-func (x *LoxFn) CastNumber() *float64 {
-	return nil
-}
-
-func (x *LoxFn) CastString() *string {
-	return nil
-}
-
 func (x *LoxFn) Equal(other Value) bool {
 	return x == other
 }
@@ -268,23 +216,6 @@ func (x *LoxFn) Arity() int {
 	return len(x.declaration.parameters)
 }
 
-func (x *LoxFn) Call(args []Value) (Value, RuntimeException) {
-	calleeEnv := NewEnvironment(x.env)
-	for i, arg := range args {
-		name := x.declaration.parameters[i]
-		calleeEnv.Define(name, arg)
-	}
-
-	for _, stmt := range x.declaration.body {
-		err := stmt.Execute(calleeEnv)
-		if err != nil {
-			ret, ok := err.(ReturnException)
-			if ok {
-				return ret.value, nil
-			}
-			return nil, err
-		}
-	}
-
-	return NewNil(), nil
+func (x *LoxFn) FnWithEnv() (FnStmt, *Environment) {
+	return x.declaration, x.env
 }
