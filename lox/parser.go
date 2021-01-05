@@ -5,12 +5,10 @@ import (
 )
 
 type Parser struct {
-	tokens     []Token
-	current    int
-	errors     []*SyntaxError
-	loopDepth  int
-	fnDepth    int
-	classDepth int
+	tokens    []Token
+	current   int
+	errors    []*SyntaxError
+	loopDepth int
 }
 
 func NewParser(tokens []Token) *Parser {
@@ -97,19 +95,11 @@ func (p *Parser) classDeclaration() Stmt {
 	name := p.consume(TokenTypeIdentifier, "expected class name")
 	p.consume(TokenTypeLeftBrace, "expected '{' before class body")
 
-	methods := func() []FnStmt {
-		p.classDepth++
-		defer func() {
-			p.classDepth--
-		}()
-
-		methods := []FnStmt{}
-		for !p.isAtEnd() && !p.check(TokenTypeRightBrace) {
-			method := p.functionStatement("method").(FnStmt)
-			methods = append(methods, method)
-		}
-		return methods
-	}()
+	methods := []FnStmt{}
+	for !p.isAtEnd() && !p.check(TokenTypeRightBrace) {
+		method := p.functionStatement("method").(FnStmt)
+		methods = append(methods, method)
+	}
 
 	p.consume(TokenTypeRightBrace, "expected '}' after class body")
 	return ClassStmt{
@@ -145,13 +135,7 @@ func (p *Parser) functionExpression(kind string) Expr {
 	p.consume(TokenTypeRightParen, "expected ')' after parameters")
 
 	p.consume(TokenTypeLeftBrace, fmt.Sprintf("expected '{' before %s body", kind))
-	body := func() BlockStmt {
-		p.fnDepth++
-		defer func() {
-			p.fnDepth--
-		}()
-		return p.block().(BlockStmt)
-	}()
+	body := p.block().(BlockStmt)
 	return FnExpr{
 		parameters: parameters,
 		body:       body.statements,
@@ -301,10 +285,6 @@ func (p *Parser) whileStatement() Stmt {
 }
 
 func (p *Parser) returnStatement() Stmt {
-	if p.fnDepth == 0 {
-		p.addError(p.previous(), "return can only be used inside a function")
-	}
-
 	keyword := p.previous()
 	var value *Expr = nil
 	if !p.check(TokenTypeSemicolon) {
@@ -604,9 +584,6 @@ func (p *Parser) primary() Expr {
 	}
 
 	if p.match(TokenTypeThis) {
-		if p.classDepth == 0 {
-			p.addError(p.previous(), "cannot use 'this' outside a class")
-		}
 		return ThisExpr{keyword: p.previous(), distance: new(int)}
 	}
 

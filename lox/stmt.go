@@ -167,7 +167,7 @@ type FnStmt struct {
 }
 
 func (s FnStmt) Execute(env *Environment) RuntimeException {
-	fn := NewLoxFn(&s.name.lexeme, s.function, env)
+	fn := NewLoxFn(&s.name.lexeme, s.function, env, false)
 	env.Define(s.name, fn)
 	return nil
 }
@@ -196,6 +196,13 @@ func (s ReturnStmt) Execute(env *Environment) RuntimeException {
 }
 
 func (s ReturnStmt) Resolve(r *Resolver) {
+	ty := r.CurrentFunction()
+	if ty == FunctionTypeNone {
+		r.AddError(s.keyword, "cannot return outside function")
+	} else if ty == FunctionTypeInitializer && s.value != nil {
+		r.AddError(s.keyword, "cannot return value from initializer")
+	}
+
 	if s.value != nil {
 		(*s.value).Resolve(r)
 	}
@@ -211,7 +218,8 @@ func (s ClassStmt) Execute(env *Environment) RuntimeException {
 
 	methods := map[string]*LoxFn{}
 	for _, method := range s.methods {
-		fn := NewLoxFn(&method.name.lexeme, method.function, env)
+		isInit := (method.name.lexeme == "init")
+		fn := NewLoxFn(&method.name.lexeme, method.function, env, isInit)
 		methods[method.name.lexeme] = fn
 	}
 
@@ -230,10 +238,10 @@ func (s ClassStmt) Resolve(r *Resolver) {
 	r.DeclareAndDefineNative("this")
 
 	for _, method := range s.methods {
-		// Don't introduce the function name itself into the scope.
-		// Methods will be called via this.foo(); if we directly
-		// resolve the method as if it were a standalone function,
-		// then we would wrongly accept foo();
-		method.function.Resolve(r)
+		ty := FunctionTypeMethod
+		if method.name.lexeme == "init" {
+			ty = FunctionTypeInitializer
+		}
+		r.ResolveFunction(method.function, ty)
 	}
 }

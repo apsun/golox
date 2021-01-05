@@ -31,9 +31,19 @@ type localVar struct {
 	defined bool
 }
 
+type FunctionType int
+
+const (
+	FunctionTypeNone FunctionType = iota
+	FunctionTypeFunction
+	FunctionTypeMethod
+	FunctionTypeInitializer
+)
+
 type Resolver struct {
-	scopes []map[string]*localVar
-	errors []*ResolverError
+	scopes          []map[string]*localVar
+	errors          []*ResolverError
+	currentFunction FunctionType
 }
 
 func NewResolver() *Resolver {
@@ -41,7 +51,8 @@ func NewResolver() *Resolver {
 		scopes: []map[string]*localVar{
 			map[string]*localVar{},
 		},
-		errors: []*ResolverError{},
+		errors:          []*ResolverError{},
+		currentFunction: FunctionTypeNone,
 	}
 }
 
@@ -49,7 +60,7 @@ func (r *Resolver) currentScope() map[string]*localVar {
 	return r.scopes[len(r.scopes)-1]
 }
 
-func (r *Resolver) addError(token Token, message string) {
+func (r *Resolver) AddError(token Token, message string) {
 	r.errors = append(r.errors, newResolverError(token, message))
 }
 
@@ -73,7 +84,7 @@ func (r *Resolver) EndScope() {
 	scope := r.scopes[len(r.scopes)-1]
 	for name, v := range scope {
 		if v.usages == 0 && name[0] != '_' {
-			r.addError(*v.token, fmt.Sprintf("'%s' declared but not used", name))
+			r.AddError(*v.token, fmt.Sprintf("'%s' declared but not used", name))
 		}
 	}
 	r.scopes = r.scopes[:len(r.scopes)-1]
@@ -83,7 +94,7 @@ func (r *Resolver) Declare(name Token) {
 	scope := r.currentScope()
 	_, ok := scope[name.lexeme]
 	if ok {
-		r.addError(name, fmt.Sprintf("'%s' already declared in this scope", name.lexeme))
+		r.AddError(name, fmt.Sprintf("'%s' already declared in this scope", name.lexeme))
 	}
 	scope[name.lexeme] = &localVar{
 		token:   &name,
@@ -114,12 +125,10 @@ func (r *Resolver) DeclareAndDefineNative(name string) {
 	}
 }
 
-func (r *Resolver) CheckDefined(name Token) {
+func (r *Resolver) IsDefined(name Token) bool {
 	scope := r.currentScope()
 	v, ok := scope[name.lexeme]
-	if ok && !v.defined {
-		r.addError(name, fmt.Sprintf("cannot refer to '%s' in its own initializer", name.lexeme))
-	}
+	return !ok || v.defined
 }
 
 func (r *Resolver) ResolveLocal(name Token) int {
@@ -132,4 +141,35 @@ func (r *Resolver) ResolveLocal(name Token) int {
 		}
 	}
 	return -1
+}
+
+func (r *Resolver) ResolveFunction(e FnExpr, ty FunctionType) {
+	oldTy := r.beginFunction(ty)
+	defer r.endFunction(oldTy)
+
+	r.BeginScope()
+	defer r.EndScope()
+
+	for _, param := range e.parameters {
+		r.Declare(param)
+		r.Define(param)
+	}
+
+	for _, stmt := range e.body {
+		stmt.Resolve(r)
+	}
+}
+
+func (r *Resolver) beginFunction(ty FunctionType) FunctionType {
+	old := r.currentFunction
+	r.currentFunction = ty
+	return old
+}
+
+func (r *Resolver) endFunction(prevTy FunctionType) {
+	r.currentFunction = prevTy
+}
+
+func (r *Resolver) CurrentFunction() FunctionType {
+	return r.currentFunction
 }

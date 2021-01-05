@@ -61,3 +61,14 @@ func (e *Environment) Get(distance int, name Token) (Value, RuntimeException) {
 	}
 	return *value, nil
 }
+
+func (e *Environment) GetNative(distance int, name string) Value {
+	value, ok := e.ancestor(distance).values[name]
+	if !ok {
+		panic(fmt.Sprintf("using undeclared variable '%s'", name))
+	}
+	if value == nil {
+		panic(fmt.Sprintf("using uninitialized variable '%s'", name))
+	}
+	return *value
+}

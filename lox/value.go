@@ -194,13 +194,15 @@ type LoxFn struct {
 	name        *string
 	declaration FnExpr
 	env         *Environment
+	isInit      bool
 }
 
-func NewLoxFn(name *string, declaration FnExpr, env *Environment) *LoxFn {
+func NewLoxFn(name *string, declaration FnExpr, env *Environment, isInit bool) *LoxFn {
 	return &LoxFn{
 		name:        name,
 		declaration: declaration,
 		env:         env,
+		isInit:      isInit,
 	}
 }
 
@@ -236,6 +238,10 @@ func (x *LoxFn) FnWithEnv() (FnExpr, *Environment) {
 	return x.declaration, x.env
 }
 
+func (x *LoxFn) IsInit() bool {
+	return x.isInit
+}
+
 // class
 type Class struct {
 	name    string
@@ -269,16 +275,24 @@ func (x *Class) Repr() string {
 	return x.String()
 }
 
-func (x *Class) Arity() int {
-	return 0
-}
-
-func (x *Class) findMethod(name string) **LoxFn {
+func (x *Class) Method(name string) **LoxFn {
 	method, ok := x.methods[name]
 	if ok {
 		return &method
 	}
 	return nil
+}
+
+func (x *Class) Initializer() **LoxFn {
+	return x.Method("init")
+}
+
+func (x *Class) Arity() int {
+	initializer := x.Initializer()
+	if initializer != nil {
+		return (*initializer).Arity()
+	}
+	return 0
 }
 
 // class instance
@@ -314,10 +328,10 @@ func (x *Instance) Repr() string {
 	return x.String()
 }
 
-func (x *Instance) bind(method *LoxFn, instance *Instance) *LoxFn {
+func (x *Instance) Bind(method *LoxFn) *LoxFn {
 	env := NewEnvironment(method.env)
-	env.DefineNative("this", instance)
-	return NewLoxFn(method.name, method.declaration, env)
+	env.DefineNative("this", x)
+	return NewLoxFn(method.name, method.declaration, env, method.isInit)
 }
 
 func (x *Instance) Get(name Token) (Value, RuntimeException) {
@@ -326,9 +340,9 @@ func (x *Instance) Get(name Token) (Value, RuntimeException) {
 		return value, nil
 	}
 
-	method := x.class.findMethod(name.lexeme)
+	method := x.class.Method(name.lexeme)
 	if method != nil {
-		return x.bind(*method, x), nil
+		return x.Bind(*method), nil
 	}
 
 	return nil, NewRuntimeError(

@@ -241,7 +241,15 @@ func (e VariableExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 }
 
 func (e VariableExpr) Resolve(r *Resolver) {
-	r.CheckDefined(e.name)
+	if !r.IsDefined(e.name) {
+		r.AddError(
+			e.name,
+			fmt.Sprintf(
+				"cannot refer to '%s' in its own initializer",
+				e.name.lexeme,
+			),
+		)
+	}
 	distance := r.ResolveLocal(e.name)
 	*e.distance = distance
 }
@@ -322,18 +330,35 @@ func (e CallExpr) callLoxFn(fn *LoxFn, args []Value) (Value, RuntimeException) {
 		calleeEnv.Define(name, arg)
 	}
 
+	var result Value = NewNil()
+
 	for _, stmt := range declaration.body {
 		err := stmt.Execute(calleeEnv)
 		if err != nil {
 			ret, ok := err.(ReturnException)
 			if ok {
-				return ret.value, nil
+				result = ret.value
+				break
 			}
 			return nil, err
 		}
 	}
 
-	return NewNil(), nil
+	// Initializers act as if they return the instance
+	if fn.IsInit() {
+		return env.GetNative(0, "this"), nil
+	}
+
+	return result, nil
+}
+
+func (e CallExpr) newInstance(class *Class, args []Value) (Value, RuntimeException) {
+	instance := NewInstance(class)
+	initializer := class.Initializer()
+	if initializer != nil {
+		return e.callLoxFn(instance.Bind(*initializer), args)
+	}
+	return instance, nil
 }
 
 func (e CallExpr) Evaluate(env *Environment) (Value, RuntimeException) {
@@ -374,7 +399,7 @@ func (e CallExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 	case *LoxFn:
 		return e.callLoxFn(callable, args)
 	case *Class:
-		return NewInstance(callable), nil
+		return e.newInstance(callable, args)
 	default:
 		panic("unreachable")
 	}
@@ -393,21 +418,11 @@ type FnExpr struct {
 }
 
 func (e FnExpr) Evaluate(env *Environment) (Value, RuntimeException) {
-	return NewLoxFn(nil, e, env), nil
+	return NewLoxFn(nil, e, env, false), nil
 }
 
 func (e FnExpr) Resolve(r *Resolver) {
-	r.BeginScope()
-	defer r.EndScope()
-
-	for _, param := range e.parameters {
-		r.Declare(param)
-		r.Define(param)
-	}
-
-	for _, stmt := range e.body {
-		stmt.Resolve(r)
-	}
+	r.ResolveFunction(e, FunctionTypeFunction)
 }
 
 type GetExpr struct {
@@ -472,5 +487,9 @@ func (e ThisExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 }
 
 func (e ThisExpr) Resolve(r *Resolver) {
+	ty := r.CurrentFunction()
+	if ty != FunctionTypeMethod && ty != FunctionTypeInitializer {
+		r.AddError(e.keyword, "cannot use this outside method")
+	}
 	*e.distance = r.ResolveLocal(e.keyword)
 }
