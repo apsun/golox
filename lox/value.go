@@ -238,12 +238,14 @@ func (x *LoxFn) FnWithEnv() (FnExpr, *Environment) {
 
 // class
 type Class struct {
-	name string
+	name    string
+	methods map[string]*LoxFn
 }
 
-func NewClass(name string) *Class {
+func NewClass(name string, methods map[string]*LoxFn) *Class {
 	return &Class{
-		name: name,
+		name:    name,
+		methods: methods,
 	}
 }
 
@@ -269,6 +271,14 @@ func (x *Class) Repr() string {
 
 func (x *Class) Arity() int {
 	return 0
+}
+
+func (x *Class) findMethod(name string) **LoxFn {
+	method, ok := x.methods[name]
+	if ok {
+		return &method
+	}
+	return nil
 }
 
 // class instance
@@ -306,13 +316,19 @@ func (x *Instance) Repr() string {
 
 func (x *Instance) Get(name Token) (Value, RuntimeException) {
 	value, ok := x.fields[name.lexeme]
-	if !ok {
-		return nil, NewRuntimeError(
-			name,
-			fmt.Sprintf("undefined property '%s'", name.lexeme),
-		)
+	if ok {
+		return value, nil
 	}
-	return value, nil
+
+	method := x.class.findMethod(name.lexeme)
+	if method != nil {
+		return *method, nil
+	}
+
+	return nil, NewRuntimeError(
+		name,
+		fmt.Sprintf("undefined property '%s'", name.lexeme),
+	)
 }
 
 func (x *Instance) Set(name Token, value Value) {

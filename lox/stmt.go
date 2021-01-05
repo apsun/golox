@@ -208,7 +208,14 @@ type ClassStmt struct {
 
 func (s ClassStmt) Execute(env *Environment) RuntimeException {
 	env.Declare(s.name)
-	class := NewClass(s.name.lexeme)
+
+	methods := map[string]*LoxFn{}
+	for _, method := range s.methods {
+		fn := NewLoxFn(&method.name.lexeme, method.function, env)
+		methods[method.name.lexeme] = fn
+	}
+
+	class := NewClass(s.name.lexeme, methods)
 	env.Define(s.name, class)
 	return nil
 }
