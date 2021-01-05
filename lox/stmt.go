@@ -223,4 +223,17 @@ func (s ClassStmt) Execute(env *Environment) RuntimeException {
 func (s ClassStmt) Resolve(r *Resolver) {
 	r.Declare(s.name)
 	r.Define(s.name)
+
+	r.BeginScope()
+	defer r.EndScope()
+
+	r.DeclareAndDefineNative("this")
+
+	for _, method := range s.methods {
+		// Don't introduce the function name itself into the scope.
+		// Methods will be called via this.foo(); if we directly
+		// resolve the method as if it were a standalone function,
+		// then we would wrongly accept foo();
+		method.function.Resolve(r)
+	}
 }

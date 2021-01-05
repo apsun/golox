@@ -5,11 +5,12 @@ import (
 )
 
 type Parser struct {
-	tokens    []Token
-	current   int
-	errors    []*SyntaxError
-	loopDepth int
-	fnDepth   int
+	tokens     []Token
+	current    int
+	errors     []*SyntaxError
+	loopDepth  int
+	fnDepth    int
+	classDepth int
 }
 
 func NewParser(tokens []Token) *Parser {
@@ -95,11 +96,21 @@ func (p *Parser) declaration() Stmt {
 func (p *Parser) classDeclaration() Stmt {
 	name := p.consume(TokenTypeIdentifier, "expected class name")
 	p.consume(TokenTypeLeftBrace, "expected '{' before class body")
-	methods := []FnStmt{}
-	for !p.isAtEnd() && !p.check(TokenTypeRightBrace) {
-		method := p.functionStatement("method").(FnStmt)
-		methods = append(methods, method)
-	}
+
+	methods := func() []FnStmt {
+		p.classDepth++
+		defer func() {
+			p.classDepth--
+		}()
+
+		methods := []FnStmt{}
+		for !p.isAtEnd() && !p.check(TokenTypeRightBrace) {
+			method := p.functionStatement("method").(FnStmt)
+			methods = append(methods, method)
+		}
+		return methods
+	}()
+
 	p.consume(TokenTypeRightBrace, "expected '}' after class body")
 	return ClassStmt{
 		name:    name,
@@ -590,6 +601,13 @@ func (p *Parser) primary() Expr {
 
 	if p.match(TokenTypeNumber, TokenTypeString) {
 		return LiteralExpr{value: p.previous().literal}
+	}
+
+	if p.match(TokenTypeThis) {
+		if p.classDepth == 0 {
+			p.addError(p.previous(), "cannot use 'this' outside a class")
+		}
+		return ThisExpr{keyword: p.previous(), distance: new(int)}
 	}
 
 	if p.match(TokenTypeIdentifier) {

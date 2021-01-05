@@ -314,6 +314,12 @@ func (x *Instance) Repr() string {
 	return x.String()
 }
 
+func (x *Instance) bind(method *LoxFn, instance *Instance) *LoxFn {
+	env := NewEnvironment(method.env)
+	env.DefineNative("this", instance)
+	return NewLoxFn(method.name, method.declaration, env)
+}
+
 func (x *Instance) Get(name Token) (Value, RuntimeException) {
 	value, ok := x.fields[name.lexeme]
 	if ok {
@@ -322,7 +328,7 @@ func (x *Instance) Get(name Token) (Value, RuntimeException) {
 
 	method := x.class.findMethod(name.lexeme)
 	if method != nil {
-		return *method, nil
+		return x.bind(*method, x), nil
 	}
 
 	return nil, NewRuntimeError(

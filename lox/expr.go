@@ -461,3 +461,16 @@ func (e SetExpr) Resolve(r *Resolver) {
 	e.value.Resolve(r)
 	e.object.Resolve(r)
 }
+
+type ThisExpr struct {
+	keyword  Token
+	distance *int
+}
+
+func (e ThisExpr) Evaluate(env *Environment) (Value, RuntimeException) {
+	return env.Get(*e.distance, e.keyword)
+}
+
+func (e ThisExpr) Resolve(r *Resolver) {
+	*e.distance = r.ResolveLocal(e.keyword)
+}
