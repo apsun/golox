@@ -351,16 +351,12 @@ func (e CallExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 		args[i] = arg
 	}
 
-	var arity int
-	switch callee := callee.(type) {
-	case *NativeFn:
-		arity = callee.Arity()
-	case *LoxFn:
-		arity = callee.Arity()
-	default:
+	callable, ok := callee.(Callable)
+	if !ok {
 		return nil, NewRuntimeError(e.paren, "value is not callable")
 	}
 
+	arity := callable.Arity()
 	if arity != len(args) {
 		return nil, NewRuntimeError(
 			e.paren,
@@ -372,11 +368,13 @@ func (e CallExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 		)
 	}
 
-	switch callee := callee.(type) {
+	switch callable := callable.(type) {
 	case *NativeFn:
-		return callee.Fn()(args)
+		return callable.Fn()(args)
 	case *LoxFn:
-		return e.callLoxFn(callee, args)
+		return e.callLoxFn(callable, args)
+	case *Class:
+		return NewInstance(callable), nil
 	default:
 		panic("unreachable")
 	}

@@ -80,6 +80,9 @@ func (p *Parser) parseExpression() (ret *Expr) {
 }
 
 func (p *Parser) declaration() Stmt {
+	if p.match(TokenTypeClass) {
+		return p.classDeclaration()
+	}
 	if p.match(TokenTypeFun) {
 		return p.functionStatement("function")
 	}
@@ -87,6 +90,21 @@ func (p *Parser) declaration() Stmt {
 		return p.varDeclaration()
 	}
 	return p.statement()
+}
+
+func (p *Parser) classDeclaration() Stmt {
+	name := p.consume(TokenTypeIdentifier, "expected class name")
+	p.consume(TokenTypeLeftBrace, "expected '{' before class body")
+	methods := []FnStmt{}
+	for !p.isAtEnd() && !p.check(TokenTypeRightBrace) {
+		method := p.functionStatement("method").(FnStmt)
+		methods = append(methods, method)
+	}
+	p.consume(TokenTypeRightBrace, "expected '}' after class body")
+	return ClassStmt{
+		name:    name,
+		methods: methods,
+	}
 }
 
 func (p *Parser) functionStatement(kind string) Stmt {

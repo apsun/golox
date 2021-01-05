@@ -200,3 +200,20 @@ func (s ReturnStmt) Resolve(r *Resolver) {
 		(*s.value).Resolve(r)
 	}
 }
+
+type ClassStmt struct {
+	name    Token
+	methods []FnStmt
+}
+
+func (s ClassStmt) Execute(env *Environment) RuntimeException {
+	env.Declare(s.name)
+	class := NewClass(s.name.lexeme)
+	env.Define(s.name, class)
+	return nil
+}
+
+func (s ClassStmt) Resolve(r *Resolver) {
+	r.Declare(s.name)
+	r.Define(s.name)
+}

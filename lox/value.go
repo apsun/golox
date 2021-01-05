@@ -12,7 +12,8 @@ const (
 	TypeBool
 	TypeNumber
 	TypeString
-	TypeCallable
+	TypeFn
+	TypeClass
 )
 
 type Value interface {
@@ -21,6 +22,11 @@ type Value interface {
 	Equal(other Value) bool
 	String() string
 	Repr() string
+}
+
+type Callable interface {
+	Value
+	Arity() int
 }
 
 // nil
@@ -155,7 +161,7 @@ func NewNativeFn(arity int, name string, fn NativeFnPtr) *NativeFn {
 }
 
 func (x *NativeFn) Type() Type {
-	return TypeCallable
+	return TypeFn
 }
 
 func (x *NativeFn) Bool() bool {
@@ -198,7 +204,7 @@ func NewLoxFn(name *string, declaration FnExpr, env *Environment) *LoxFn {
 }
 
 func (x *LoxFn) Type() Type {
-	return TypeCallable
+	return TypeFn
 }
 
 func (x *LoxFn) Bool() bool {
@@ -227,4 +233,70 @@ func (x *LoxFn) Arity() int {
 
 func (x *LoxFn) FnWithEnv() (FnExpr, *Environment) {
 	return x.declaration, x.env
+}
+
+// class
+type Class struct {
+	name string
+}
+
+func NewClass(name string) *Class {
+	return &Class{
+		name: name,
+	}
+}
+
+func (x *Class) Type() Type {
+	return TypeClass
+}
+
+func (x *Class) Bool() bool {
+	return true
+}
+
+func (x *Class) Equal(other Value) bool {
+	return x == other
+}
+
+func (x *Class) String() string {
+	return fmt.Sprintf("<class '%s'>", x.name)
+}
+
+func (x *Class) Repr() string {
+	return x.String()
+}
+
+func (x *Class) Arity() int {
+	return 0
+}
+
+// class instance
+type Instance struct {
+	class *Class
+}
+
+func NewInstance(class *Class) *Instance {
+	return &Instance{
+		class: class,
+	}
+}
+
+func (x *Instance) Type() Type {
+	return TypeClass
+}
+
+func (x *Instance) Bool() bool {
+	return true
+}
+
+func (x *Instance) Equal(other Value) bool {
+	return x == other
+}
+
+func (x *Instance) String() string {
+	return fmt.Sprintf("<instance of class '%s'>", x.class.name)
+}
+
+func (x *Instance) Repr() string {
+	return x.String()
 }
