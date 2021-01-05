@@ -373,9 +373,6 @@ func (p *Parser) assignment() Expr {
 		equals := p.previous()
 		value := p.assignment()
 
-		// Left hand side needs to be a variable expression
-		// for now. We reach into it and grab the name of the
-		// variable.
 		varExpr, ok := expr.(VariableExpr)
 		if ok {
 			name := varExpr.name
@@ -383,6 +380,15 @@ func (p *Parser) assignment() Expr {
 				name:     name,
 				value:    value,
 				distance: new(int),
+			}
+		}
+
+		getExpr, ok := expr.(GetExpr)
+		if ok {
+			return SetExpr{
+				object: getExpr.object,
+				name:   getExpr.name,
+				value:  value,
 			}
 		}
 
@@ -532,6 +538,12 @@ func (p *Parser) call() Expr {
 	for {
 		if p.match(TokenTypeLeftParen) {
 			expr = p.finishCall(expr)
+		} else if p.match(TokenTypeDot) {
+			name := p.consume(TokenTypeIdentifier, "expected property name")
+			expr = GetExpr{
+				object: expr,
+				name:   name,
+			}
 		} else {
 			break
 		}

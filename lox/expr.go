@@ -409,3 +409,55 @@ func (e FnExpr) Resolve(r *Resolver) {
 		stmt.Resolve(r)
 	}
 }
+
+type GetExpr struct {
+	object Expr
+	name   Token
+}
+
+func (e GetExpr) Evaluate(env *Environment) (Value, RuntimeException) {
+	object, err := e.object.Evaluate(env)
+	if err != nil {
+		return nil, err
+	}
+
+	if object.Type() != TypeInstance {
+		return nil, NewRuntimeError(e.name, "only instances have properties")
+	}
+
+	return object.(*Instance).Get(e.name)
+}
+
+func (e GetExpr) Resolve(r *Resolver) {
+	e.object.Resolve(r)
+}
+
+type SetExpr struct {
+	object Expr
+	name   Token
+	value  Expr
+}
+
+func (e SetExpr) Evaluate(env *Environment) (Value, RuntimeException) {
+	object, err := e.object.Evaluate(env)
+	if err != nil {
+		return nil, err
+	}
+
+	if object.Type() != TypeInstance {
+		return nil, NewRuntimeError(e.name, "only instances have properties")
+	}
+
+	value, err := e.value.Evaluate(env)
+	if err != nil {
+		return nil, err
+	}
+
+	object.(*Instance).Set(e.name, value)
+	return value, nil
+}
+
+func (e SetExpr) Resolve(r *Resolver) {
+	e.value.Resolve(r)
+	e.object.Resolve(r)
+}

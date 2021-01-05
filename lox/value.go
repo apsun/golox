@@ -14,6 +14,7 @@ const (
 	TypeString
 	TypeFn
 	TypeClass
+	TypeInstance
 )
 
 type Value interface {
@@ -272,17 +273,19 @@ func (x *Class) Arity() int {
 
 // class instance
 type Instance struct {
-	class *Class
+	class  *Class
+	fields map[string]Value
 }
 
 func NewInstance(class *Class) *Instance {
 	return &Instance{
-		class: class,
+		class:  class,
+		fields: map[string]Value{},
 	}
 }
 
 func (x *Instance) Type() Type {
-	return TypeClass
+	return TypeInstance
 }
 
 func (x *Instance) Bool() bool {
@@ -299,4 +302,19 @@ func (x *Instance) String() string {
 
 func (x *Instance) Repr() string {
 	return x.String()
+}
+
+func (x *Instance) Get(name Token) (Value, RuntimeException) {
+	value, ok := x.fields[name.lexeme]
+	if !ok {
+		return nil, NewRuntimeError(
+			name,
+			fmt.Sprintf("undefined property '%s'", name.lexeme),
+		)
+	}
+	return value, nil
+}
+
+func (x *Instance) Set(name Token, value Value) {
+	x.fields[name.lexeme] = value
 }
