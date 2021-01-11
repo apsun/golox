@@ -309,6 +309,9 @@ func (s ClassStmt) Resolve(r *Resolver) {
 	for _, method := range s.methods {
 		ty := FunctionTypeMethod
 		if method.name.lexeme == "init" {
+			if method.isProperty {
+				r.AddError(method.name, "init cannot be a property")
+			}
 			ty = FunctionTypeInitializer
 		}
 		r.ResolveFunction(method.function, ty)
