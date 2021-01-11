@@ -209,12 +209,20 @@ func (s ReturnStmt) Resolve(r *Resolver) {
 }
 
 type ClassStmt struct {
-	name    Token
-	methods []FnStmt
+	name         Token
+	methods      []FnStmt
+	classMethods []FnStmt
 }
 
 func (s ClassStmt) Execute(env *Environment) RuntimeException {
 	env.Declare(s.name)
+
+	classMethods := map[string]*LoxFn{}
+	for _, method := range s.classMethods {
+		fn := NewLoxFn(&method.name.lexeme, method.function, env, false)
+		classMethods[method.name.lexeme] = fn
+	}
+	metaclass := NewClass(nil, s.name.lexeme+" metaclass", classMethods)
 
 	methods := map[string]*LoxFn{}
 	for _, method := range s.methods {
@@ -222,8 +230,8 @@ func (s ClassStmt) Execute(env *Environment) RuntimeException {
 		fn := NewLoxFn(&method.name.lexeme, method.function, env, isInit)
 		methods[method.name.lexeme] = fn
 	}
+	class := NewClass(metaclass, s.name.lexeme, methods)
 
-	class := NewClass(s.name.lexeme, methods)
 	env.Define(s.name, class)
 	return nil
 }
@@ -236,6 +244,10 @@ func (s ClassStmt) Resolve(r *Resolver) {
 	defer r.EndScope()
 
 	r.DeclareAndDefineNative("this")
+
+	for _, method := range s.classMethods {
+		r.ResolveFunction(method.function, FunctionTypeMethod)
+	}
 
 	for _, method := range s.methods {
 		ty := FunctionTypeMethod

@@ -242,14 +242,25 @@ func (x *LoxFn) IsInit() bool {
 	return x.isInit
 }
 
+// common interface for classes and instances
+type Fielder interface {
+	Get(name Token) (Value, RuntimeException)
+	Set(name Token, value Value)
+}
+
 // class
 type Class struct {
+	Instance
 	name    string
 	methods map[string]*LoxFn
 }
 
-func NewClass(name string, methods map[string]*LoxFn) *Class {
+func NewClass(metaclass *Class, name string, methods map[string]*LoxFn) *Class {
 	return &Class{
+		Instance: Instance{
+			class:  metaclass,
+			fields: map[string]Value{},
+		},
 		name:    name,
 		methods: methods,
 	}

@@ -436,11 +436,15 @@ func (e GetExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 		return nil, err
 	}
 
-	if object.Type() != TypeInstance {
-		return nil, NewRuntimeError(e.name, "only instances have properties")
+	inst, ok := object.(Fielder)
+	if !ok {
+		return nil, NewRuntimeError(
+			e.name,
+			"only classes and instances have properties",
+		)
 	}
 
-	return object.(*Instance).Get(e.name)
+	return inst.Get(e.name)
 }
 
 func (e GetExpr) Resolve(r *Resolver) {
@@ -459,8 +463,12 @@ func (e SetExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 		return nil, err
 	}
 
-	if object.Type() != TypeInstance {
-		return nil, NewRuntimeError(e.name, "only instances have properties")
+	inst, ok := object.(Fielder)
+	if !ok {
+		return nil, NewRuntimeError(
+			e.name,
+			"only classes and instances have properties",
+		)
 	}
 
 	value, err := e.value.Evaluate(env)
@@ -468,7 +476,7 @@ func (e SetExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 		return nil, err
 	}
 
-	object.(*Instance).Set(e.name, value)
+	inst.Set(e.name, value)
 	return value, nil
 }
 

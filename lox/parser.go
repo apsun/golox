@@ -96,15 +96,22 @@ func (p *Parser) classDeclaration() Stmt {
 	p.consume(TokenTypeLeftBrace, "expected '{' before class body")
 
 	methods := []FnStmt{}
+	classMethods := []FnStmt{}
 	for !p.isAtEnd() && !p.check(TokenTypeRightBrace) {
+		isClass := p.match(TokenTypeClass)
 		method := p.functionStatement("method").(FnStmt)
-		methods = append(methods, method)
+		if isClass {
+			classMethods = append(classMethods, method)
+		} else {
+			methods = append(methods, method)
+		}
 	}
 
 	p.consume(TokenTypeRightBrace, "expected '}' after class body")
 	return ClassStmt{
-		name:    name,
-		methods: methods,
+		name:         name,
+		methods:      methods,
+		classMethods: classMethods,
 	}
 }
 
