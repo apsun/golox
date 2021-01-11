@@ -167,7 +167,8 @@ type FnStmt struct {
 }
 
 func (s FnStmt) Execute(env *Environment) RuntimeException {
-	fn := NewLoxFn(&s.name.lexeme, s.function, env, false)
+	name := s.name.lexeme
+	fn := NewLoxFn(&name, s.function, env, false, false)
 	env.Define(s.name, fn)
 	return nil
 }
@@ -176,6 +177,19 @@ func (s FnStmt) Resolve(r *Resolver) {
 	r.Declare(s.name)
 	r.Define(s.name)
 	s.function.Resolve(r)
+}
+
+type MethodStmt struct {
+	FnStmt
+	isProperty bool
+}
+
+func (s MethodStmt) Execute(env *Environment) RuntimeException {
+	panic("should not be called")
+}
+
+func (s MethodStmt) Resolve(r *Resolver) {
+	panic("should not be called")
 }
 
 type ReturnStmt struct {
@@ -210,8 +224,8 @@ func (s ReturnStmt) Resolve(r *Resolver) {
 
 type ClassStmt struct {
 	name         Token
-	methods      []FnStmt
-	classMethods []FnStmt
+	methods      []MethodStmt
+	classMethods []MethodStmt
 }
 
 func (s ClassStmt) Execute(env *Environment) RuntimeException {
@@ -219,15 +233,17 @@ func (s ClassStmt) Execute(env *Environment) RuntimeException {
 
 	classMethods := map[string]*LoxFn{}
 	for _, method := range s.classMethods {
-		fn := NewLoxFn(&method.name.lexeme, method.function, env, false)
+		name := method.name.lexeme
+		fn := NewLoxFn(&name, method.function, env, false, method.isProperty)
 		classMethods[method.name.lexeme] = fn
 	}
 	metaclass := NewClass(nil, s.name.lexeme+" metaclass", classMethods)
 
 	methods := map[string]*LoxFn{}
 	for _, method := range s.methods {
-		isInit := (method.name.lexeme == "init")
-		fn := NewLoxFn(&method.name.lexeme, method.function, env, isInit)
+		name := method.name.lexeme
+		isInit := (name == "init")
+		fn := NewLoxFn(&name, method.function, env, isInit, method.isProperty)
 		methods[method.name.lexeme] = fn
 	}
 	class := NewClass(metaclass, s.name.lexeme, methods)

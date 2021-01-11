@@ -321,7 +321,7 @@ type CallExpr struct {
 	arguments []Expr
 }
 
-func (e CallExpr) callLoxFn(fn *LoxFn, args []Value) (Value, RuntimeException) {
+func callLoxFn(fn *LoxFn, args []Value) (Value, RuntimeException) {
 	declaration, env := fn.FnWithEnv()
 
 	calleeEnv := NewEnvironment(env)
@@ -352,11 +352,11 @@ func (e CallExpr) callLoxFn(fn *LoxFn, args []Value) (Value, RuntimeException) {
 	return result, nil
 }
 
-func (e CallExpr) newInstance(class *Class, args []Value) (Value, RuntimeException) {
+func newInstance(class *Class, args []Value) (Value, RuntimeException) {
 	instance := NewInstance(class)
 	initializer := class.Initializer()
 	if initializer != nil {
-		return e.callLoxFn(instance.Bind(*initializer), args)
+		return callLoxFn(instance.Bind(*initializer), args)
 	}
 	return instance, nil
 }
@@ -386,7 +386,7 @@ func (e CallExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 		return nil, NewRuntimeError(
 			e.paren,
 			fmt.Sprintf(
-				"expected %d arguments but got %d",
+				"expected %d argument(s) but got %d",
 				arity,
 				len(args),
 			),
@@ -397,9 +397,9 @@ func (e CallExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 	case *NativeFn:
 		return callable.Fn()(args)
 	case *LoxFn:
-		return e.callLoxFn(callable, args)
+		return callLoxFn(callable, args)
 	case *Class:
-		return e.newInstance(callable, args)
+		return newInstance(callable, args)
 	default:
 		panic("unreachable")
 	}
@@ -418,7 +418,7 @@ type FnExpr struct {
 }
 
 func (e FnExpr) Evaluate(env *Environment) (Value, RuntimeException) {
-	return NewLoxFn(nil, e, env, false), nil
+	return NewLoxFn(nil, e, env, false, false), nil
 }
 
 func (e FnExpr) Resolve(r *Resolver) {
@@ -444,7 +444,19 @@ func (e GetExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 		)
 	}
 
-	return inst.Get(e.name)
+	value, err := inst.Get(e.name)
+	if err != nil {
+		return nil, err
+	}
+
+	fn, ok := value.(*LoxFn)
+	if ok && fn.IsProperty() {
+		value, err = callLoxFn(fn, nil)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return value, nil
 }
 
 func (e GetExpr) Resolve(r *Resolver) {

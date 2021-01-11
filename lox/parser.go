@@ -1,9 +1,5 @@
 package lox
 
-import (
-	"fmt"
-)
-
 type Parser struct {
 	tokens    []Token
 	current   int
@@ -83,7 +79,7 @@ func (p *Parser) declaration() Stmt {
 		return p.classDeclaration()
 	}
 	if p.match(TokenTypeFun) {
-		return p.functionStatement("function")
+		return p.functionStatement()
 	}
 	if p.match(TokenTypeVar) {
 		return p.varDeclaration()
@@ -95,11 +91,11 @@ func (p *Parser) classDeclaration() Stmt {
 	name := p.consume(TokenTypeIdentifier, "expected class name")
 	p.consume(TokenTypeLeftBrace, "expected '{' before class body")
 
-	methods := []FnStmt{}
-	classMethods := []FnStmt{}
+	methods := []MethodStmt{}
+	classMethods := []MethodStmt{}
 	for !p.isAtEnd() && !p.check(TokenTypeRightBrace) {
 		isClass := p.match(TokenTypeClass)
-		method := p.functionStatement("method").(FnStmt)
+		method := p.methodStatement().(MethodStmt)
 		if isClass {
 			classMethods = append(classMethods, method)
 		} else {
@@ -115,17 +111,7 @@ func (p *Parser) classDeclaration() Stmt {
 	}
 }
 
-func (p *Parser) functionStatement(kind string) Stmt {
-	name := p.consume(TokenTypeIdentifier, fmt.Sprintf("expected %s name", kind))
-	function := p.functionExpression(kind).(FnExpr)
-	return FnStmt{
-		name:     name,
-		function: function,
-	}
-}
-
-func (p *Parser) functionExpression(kind string) Expr {
-	p.consume(TokenTypeLeftParen, fmt.Sprintf("expected '(' after 'fun'", kind))
+func (p *Parser) parameterList() []Token {
 	parameters := []Token{}
 	if !p.check(TokenTypeRightParen) {
 		for {
@@ -140,8 +126,50 @@ func (p *Parser) functionExpression(kind string) Expr {
 		}
 	}
 	p.consume(TokenTypeRightParen, "expected ')' after parameters")
+	return parameters
+}
 
-	p.consume(TokenTypeLeftBrace, fmt.Sprintf("expected '{' before %s body", kind))
+func (p *Parser) methodStatement() Stmt {
+	name := p.consume(TokenTypeIdentifier, "expected method or property name")
+
+	var isProperty bool
+	var parameters []Token
+	if p.match(TokenTypeLeftParen) {
+		isProperty = false
+		parameters = p.parameterList()
+	} else {
+		isProperty = true
+		parameters = nil
+	}
+
+	p.consume(TokenTypeLeftBrace, "expected '{' before method body")
+	body := p.block().(BlockStmt)
+	return MethodStmt{
+		FnStmt: FnStmt{
+			name: name,
+			function: FnExpr{
+				parameters: parameters,
+				body:       body.statements,
+			},
+		},
+		isProperty: isProperty,
+	}
+}
+
+func (p *Parser) functionStatement() Stmt {
+	name := p.consume(TokenTypeIdentifier, "expected function name")
+	function := p.functionExpression().(FnExpr)
+	return FnStmt{
+		name:     name,
+		function: function,
+	}
+}
+
+func (p *Parser) functionExpression() Expr {
+	p.consume(TokenTypeLeftParen, "expected '(' after 'fun'")
+	parameters := p.parameterList()
+
+	p.consume(TokenTypeLeftBrace, "expected '{' before function body")
 	body := p.block().(BlockStmt)
 	return FnExpr{
 		parameters: parameters,
@@ -599,7 +627,7 @@ func (p *Parser) primary() Expr {
 	}
 
 	if p.match(TokenTypeFun) {
-		return p.functionExpression("function")
+		return p.functionExpression()
 	}
 
 	if p.match(TokenTypeLeftParen) {

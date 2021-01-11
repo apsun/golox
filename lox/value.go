@@ -195,14 +195,22 @@ type LoxFn struct {
 	declaration FnExpr
 	env         *Environment
 	isInit      bool
+	isProperty  bool
 }
 
-func NewLoxFn(name *string, declaration FnExpr, env *Environment, isInit bool) *LoxFn {
+func NewLoxFn(
+	name *string,
+	declaration FnExpr,
+	env *Environment,
+	isInit bool,
+	isProperty bool,
+) *LoxFn {
 	return &LoxFn{
 		name:        name,
 		declaration: declaration,
 		env:         env,
 		isInit:      isInit,
+		isProperty:  isProperty,
 	}
 }
 
@@ -240,6 +248,10 @@ func (x *LoxFn) FnWithEnv() (FnExpr, *Environment) {
 
 func (x *LoxFn) IsInit() bool {
 	return x.isInit
+}
+
+func (x *LoxFn) IsProperty() bool {
+	return x.isProperty
 }
 
 // common interface for classes and instances
@@ -342,7 +354,7 @@ func (x *Instance) Repr() string {
 func (x *Instance) Bind(method *LoxFn) *LoxFn {
 	env := NewEnvironment(method.env)
 	env.DefineNative("this", x)
-	return NewLoxFn(method.name, method.declaration, env, method.isInit)
+	return NewLoxFn(method.name, method.declaration, env, method.isInit, method.isProperty)
 }
 
 func (x *Instance) Get(name Token) (Value, RuntimeException) {
