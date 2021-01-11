@@ -263,18 +263,25 @@ type Fielder interface {
 // class
 type Class struct {
 	Instance
-	name    string
-	methods map[string]*LoxFn
+	name       string
+	superclass **Class
+	methods    map[string]*LoxFn
 }
 
-func NewClass(metaclass *Class, name string, methods map[string]*LoxFn) *Class {
+func NewClass(
+	metaclass **Class,
+	name string,
+	superclass **Class,
+	methods map[string]*LoxFn,
+) *Class {
 	return &Class{
 		Instance: Instance{
 			class:  metaclass,
 			fields: map[string]Value{},
 		},
-		name:    name,
-		methods: methods,
+		name:       name,
+		superclass: superclass,
+		methods:    methods,
 	}
 }
 
@@ -303,6 +310,9 @@ func (x *Class) Method(name string) **LoxFn {
 	if ok {
 		return &method
 	}
+	if x.superclass != nil {
+		return (*x.superclass).Method(name)
+	}
 	return nil
 }
 
@@ -320,13 +330,13 @@ func (x *Class) Arity() int {
 
 // class instance
 type Instance struct {
-	class  *Class
+	class  **Class
 	fields map[string]Value
 }
 
 func NewInstance(class *Class) *Instance {
 	return &Instance{
-		class:  class,
+		class:  &class,
 		fields: map[string]Value{},
 	}
 }
@@ -344,11 +354,15 @@ func (x *Instance) Equal(other Value) bool {
 }
 
 func (x *Instance) String() string {
-	return fmt.Sprintf("<instance of class '%s'>", x.class.name)
+	return fmt.Sprintf("<instance of class '%s'>", x.Class().name)
 }
 
 func (x *Instance) Repr() string {
 	return x.String()
+}
+
+func (x *Instance) Class() *Class {
+	return *x.class
 }
 
 func (x *Instance) Bind(method *LoxFn) *LoxFn {
@@ -363,7 +377,7 @@ func (x *Instance) Get(name Token) (Value, RuntimeException) {
 		return value, nil
 	}
 
-	method := x.class.Method(name.lexeme)
+	method := x.Class().Method(name.lexeme)
 	if method != nil {
 		return x.Bind(*method), nil
 	}

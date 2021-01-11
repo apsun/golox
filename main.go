@@ -52,6 +52,7 @@ func run(source string, env *lox.Environment, allowExpr bool) bool {
 					fmt.Printf("%v\n", value.Repr())
 				} else {
 					fmt.Fprintf(os.Stderr, "%v\n", err)
+					return false
 				}
 				return true
 			}
@@ -76,6 +77,7 @@ func run(source string, env *lox.Environment, allowExpr bool) bool {
 		err := stmt.Execute(env)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
+			return false
 		}
 	}
 

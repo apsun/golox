@@ -89,6 +89,16 @@ func (p *Parser) declaration() Stmt {
 
 func (p *Parser) classDeclaration() Stmt {
 	name := p.consume(TokenTypeIdentifier, "expected class name")
+
+	var superclass *VariableExpr = nil
+	if p.match(TokenTypeLess) {
+		p.consume(TokenTypeIdentifier, "expected superclass name")
+		superclass = &VariableExpr{
+			name:     p.previous(),
+			distance: new(int),
+		}
+	}
+
 	p.consume(TokenTypeLeftBrace, "expected '{' before class body")
 
 	methods := []MethodStmt{}
@@ -106,6 +116,7 @@ func (p *Parser) classDeclaration() Stmt {
 	p.consume(TokenTypeRightBrace, "expected '}' after class body")
 	return ClassStmt{
 		name:         name,
+		superclass:   superclass,
 		methods:      methods,
 		classMethods: classMethods,
 	}

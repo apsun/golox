@@ -224,11 +224,25 @@ func (s ReturnStmt) Resolve(r *Resolver) {
 
 type ClassStmt struct {
 	name         Token
+	superclass   *VariableExpr
 	methods      []MethodStmt
 	classMethods []MethodStmt
 }
 
 func (s ClassStmt) Execute(env *Environment) RuntimeException {
+	var superclass **Class = nil
+	if s.superclass != nil {
+		super, err := s.superclass.Evaluate(env)
+		if err != nil {
+			return err
+		}
+		if super.Type() != TypeClass {
+			return NewRuntimeError(s.superclass.name, "superclass must be a class")
+		}
+		tmp := super.(*Class)
+		superclass = &tmp
+	}
+
 	env.Declare(s.name)
 
 	classMethods := map[string]*LoxFn{}
@@ -237,7 +251,7 @@ func (s ClassStmt) Execute(env *Environment) RuntimeException {
 		fn := NewLoxFn(&name, method.function, env, false, method.isProperty)
 		classMethods[method.name.lexeme] = fn
 	}
-	metaclass := NewClass(nil, s.name.lexeme+" metaclass", classMethods)
+	metaclass := NewClass(nil, s.name.lexeme+" metaclass", nil, classMethods)
 
 	methods := map[string]*LoxFn{}
 	for _, method := range s.methods {
@@ -246,7 +260,7 @@ func (s ClassStmt) Execute(env *Environment) RuntimeException {
 		fn := NewLoxFn(&name, method.function, env, isInit, method.isProperty)
 		methods[method.name.lexeme] = fn
 	}
-	class := NewClass(metaclass, s.name.lexeme, methods)
+	class := NewClass(&metaclass, s.name.lexeme, superclass, methods)
 
 	env.Define(s.name, class)
 	return nil
@@ -255,6 +269,13 @@ func (s ClassStmt) Execute(env *Environment) RuntimeException {
 func (s ClassStmt) Resolve(r *Resolver) {
 	r.Declare(s.name)
 	r.Define(s.name)
+
+	if s.superclass != nil {
+		if s.name.lexeme == s.superclass.name.lexeme {
+			r.AddError(s.superclass.name, "class cannot inherit from itself")
+		}
+		s.superclass.Resolve(r)
+	}
 
 	r.BeginScope()
 	defer r.EndScope()
