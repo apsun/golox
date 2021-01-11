@@ -231,6 +231,7 @@ type ClassStmt struct {
 
 func (s ClassStmt) Execute(env *Environment) RuntimeException {
 	var superclass **Class = nil
+	var supermetaclass **Class = nil
 	if s.superclass != nil {
 		super, err := s.superclass.Evaluate(env)
 		if err != nil {
@@ -241,26 +242,42 @@ func (s ClassStmt) Execute(env *Environment) RuntimeException {
 		}
 		tmp := super.(*Class)
 		superclass = &tmp
+		tmpcls := tmp.Class()
+		supermetaclass = &tmpcls
 	}
 
 	env.Declare(s.name)
 
-	classMethods := map[string]*LoxFn{}
-	for _, method := range s.classMethods {
-		name := method.name.lexeme
-		fn := NewLoxFn(&name, method.function, env, false, method.isProperty)
-		classMethods[method.name.lexeme] = fn
+	metaEnv := env
+	if s.superclass != nil {
+		metaEnv = NewEnvironment(env)
+		metaEnv.DefineNative("super", *supermetaclass)
 	}
-	metaclass := NewClass(nil, s.name.lexeme+" metaclass", nil, classMethods)
+	metaclass := func(env *Environment) *Class {
+		classMethods := map[string]*LoxFn{}
+		for _, method := range s.classMethods {
+			name := method.name.lexeme
+			fn := NewLoxFn(&name, method.function, env, false, method.isProperty)
+			classMethods[method.name.lexeme] = fn
+		}
+		return NewClass(nil, s.name.lexeme+" metaclass", supermetaclass, classMethods)
+	}(metaEnv)
 
-	methods := map[string]*LoxFn{}
-	for _, method := range s.methods {
-		name := method.name.lexeme
-		isInit := (name == "init")
-		fn := NewLoxFn(&name, method.function, env, isInit, method.isProperty)
-		methods[method.name.lexeme] = fn
+	classEnv := env
+	if s.superclass != nil {
+		classEnv = NewEnvironment(env)
+		classEnv.DefineNative("super", *superclass)
 	}
-	class := NewClass(&metaclass, s.name.lexeme, superclass, methods)
+	class := func(env *Environment) *Class {
+		methods := map[string]*LoxFn{}
+		for _, method := range s.methods {
+			name := method.name.lexeme
+			isInit := (name == "init")
+			fn := NewLoxFn(&name, method.function, env, isInit, method.isProperty)
+			methods[method.name.lexeme] = fn
+		}
+		return NewClass(&metaclass, s.name.lexeme, superclass, methods)
+	}(classEnv)
 
 	env.Define(s.name, class)
 	return nil
@@ -275,11 +292,14 @@ func (s ClassStmt) Resolve(r *Resolver) {
 			r.AddError(s.superclass.name, "class cannot inherit from itself")
 		}
 		s.superclass.Resolve(r)
+
+		r.BeginScope()
+		defer r.EndScope()
+		r.DeclareAndDefineNative("super")
 	}
 
 	r.BeginScope()
 	defer r.EndScope()
-
 	r.DeclareAndDefineNative("this")
 
 	for _, method := range s.classMethods {

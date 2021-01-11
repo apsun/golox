@@ -629,6 +629,13 @@ func (p *Parser) primary() Expr {
 		return LiteralExpr{value: p.previous().literal}
 	}
 
+	if p.match(TokenTypeSuper) {
+		keyword := p.previous()
+		p.consume(TokenTypeDot, "expected '.' after 'super'")
+		method := p.consume(TokenTypeIdentifier, "expected method name")
+		return SuperExpr{keyword: keyword, method: method, distance: new(int)}
+	}
+
 	if p.match(TokenTypeThis) {
 		return ThisExpr{keyword: p.previous(), distance: new(int)}
 	}

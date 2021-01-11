@@ -305,23 +305,23 @@ func (x *Class) Repr() string {
 	return x.String()
 }
 
-func (x *Class) Method(name string) **LoxFn {
+func (x *Class) method(name string) **LoxFn {
 	method, ok := x.methods[name]
 	if ok {
 		return &method
 	}
 	if x.superclass != nil {
-		return (*x.superclass).Method(name)
+		return (*x.superclass).method(name)
 	}
 	return nil
 }
 
-func (x *Class) Initializer() **LoxFn {
-	return x.Method("init")
+func (x *Class) initializer() **LoxFn {
+	return x.method("init")
 }
 
 func (x *Class) Arity() int {
-	initializer := x.Initializer()
+	initializer := x.initializer()
 	if initializer != nil {
 		return (*initializer).Arity()
 	}
@@ -365,10 +365,31 @@ func (x *Instance) Class() *Class {
 	return *x.class
 }
 
-func (x *Instance) Bind(method *LoxFn) *LoxFn {
+func (x *Instance) bind(method *LoxFn) *LoxFn {
 	env := NewEnvironment(method.env)
 	env.DefineNative("this", x)
 	return NewLoxFn(method.name, method.declaration, env, method.isInit, method.isProperty)
+}
+
+func (x *Instance) Initializer() **LoxFn {
+	init := x.Class().initializer()
+	if init == nil {
+		return nil
+	}
+	tmp := x.bind(*init)
+	return &tmp
+}
+
+func (x *Instance) MethodAtClass(name Token, class *Class) (*LoxFn, RuntimeException) {
+	method := class.method(name.lexeme)
+	if method != nil {
+		return x.bind(*method), nil
+	}
+
+	return nil, NewRuntimeError(
+		name,
+		fmt.Sprintf("undefined method '%s'", class.name, name.lexeme),
+	)
 }
 
 func (x *Instance) Get(name Token) (Value, RuntimeException) {
@@ -377,14 +398,14 @@ func (x *Instance) Get(name Token) (Value, RuntimeException) {
 		return value, nil
 	}
 
-	method := x.Class().Method(name.lexeme)
+	method := x.Class().method(name.lexeme)
 	if method != nil {
-		return x.Bind(*method), nil
+		return x.bind(*method), nil
 	}
 
 	return nil, NewRuntimeError(
 		name,
-		fmt.Sprintf("undefined property '%s'", name.lexeme),
+		fmt.Sprintf("undefined method/property/field '%s'", name.lexeme),
 	)
 }
 

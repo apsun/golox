@@ -354,9 +354,9 @@ func callLoxFn(fn *LoxFn, args []Value) (Value, RuntimeException) {
 
 func newInstance(class *Class, args []Value) (Value, RuntimeException) {
 	instance := NewInstance(class)
-	initializer := class.Initializer()
+	initializer := instance.Initializer()
 	if initializer != nil {
-		return callLoxFn(instance.Bind(*initializer), args)
+		return callLoxFn(*initializer, args)
 	}
 	return instance, nil
 }
@@ -451,10 +451,7 @@ func (e GetExpr) Evaluate(env *Environment) (Value, RuntimeException) {
 
 	fn, ok := value.(*LoxFn)
 	if ok && fn.IsProperty() {
-		value, err = callLoxFn(fn, nil)
-		if err != nil {
-			return nil, err
-		}
+		return callLoxFn(fn, nil)
 	}
 	return value, nil
 }
@@ -503,13 +500,47 @@ type ThisExpr struct {
 }
 
 func (e ThisExpr) Evaluate(env *Environment) (Value, RuntimeException) {
-	return env.Get(*e.distance, e.keyword)
+	return env.GetNative(*e.distance, "this"), nil
 }
 
 func (e ThisExpr) Resolve(r *Resolver) {
 	ty := r.CurrentFunction()
 	if ty != FunctionTypeMethod && ty != FunctionTypeInitializer {
 		r.AddError(e.keyword, "cannot use this outside method")
+	}
+	*e.distance = r.ResolveLocal(e.keyword)
+}
+
+type SuperExpr struct {
+	keyword  Token
+	method   Token
+	distance *int
+}
+
+func (e SuperExpr) Evaluate(env *Environment) (Value, RuntimeException) {
+	superclass, err := env.Get(*e.distance, e.keyword)
+	if err != nil {
+		return nil, err
+	}
+
+	object := env.GetNative(*e.distance-1, "this")
+
+	method, err := object.(*Instance).MethodAtClass(e.method, superclass.(*Class))
+	if err != nil {
+		return nil, err
+	}
+
+	if method.IsProperty() {
+		return callLoxFn(method, nil)
+	}
+
+	return method, nil
+}
+
+func (e SuperExpr) Resolve(r *Resolver) {
+	ty := r.CurrentFunction()
+	if ty != FunctionTypeMethod && ty != FunctionTypeInitializer {
+		r.AddError(e.keyword, "cannot use super outside method")
 	}
 	*e.distance = r.ResolveLocal(e.keyword)
 }
